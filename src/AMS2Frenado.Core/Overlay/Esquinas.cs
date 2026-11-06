@@ -35,6 +35,26 @@ public static class Esquinas
         return w >= 40 && h >= 40;
     }
 
+    /// <summary>Por debajo de este ancho de pantalla (DIP) el menu de configuracion cae a una columna con desplazamiento (P35).</summary>
+    public const double AnchoMinimoDosColumnas = 800;
+    public static bool MenuEnUnaColumna(AreaPantalla a) => a.Ancho < AnchoMinimoDosColumnas;
+
+    /// <summary>
+    /// Donde abrir el menu de configuracion: del lado donde haya lugar. Prefiere abajo de la barra de botones y alineado a su
+    /// borde derecho (el overlay suele estar contra el borde derecho); si abajo no entra, arriba; si no alinea a la derecha, a la
+    /// izquierda. Siempre dentro del area de trabajo. Se calcula al abrir y no se mueve mientras esta abierto.
+    /// </summary>
+    public static (double X, double Y) PosicionMenu(AreaPantalla barra, AreaPantalla area, double ancho, double alto, double separacion = 6)
+    {
+        double x = barra.Derecha - ancho;
+        if (x < area.X) x = barra.X;
+        double abajo = barra.Abajo + separacion;
+        double y = abajo + alto <= area.Abajo ? abajo
+            : barra.Y - separacion - alto >= area.Y ? barra.Y - separacion - alto
+            : abajo;
+        return AjustarDentro((x, y), area, ancho, alto);
+    }
+
     public static string Nombre(Esquina e) => e switch
     {
         Esquina.ArribaDerecha => "Arriba a la derecha",

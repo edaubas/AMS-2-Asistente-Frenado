@@ -12,9 +12,11 @@ namespace AMS2Frenado.App;
 
 /// <summary>
 /// Overlay: ventana sin bordes, siempre arriba y semitransparente que solo dibuja lo que le dicen el
-/// <see cref="VistaOverlay"/> y el <see cref="CuadroUi"/> del Core (no tiene logica de estados). Ya no hay mini mapa:
-/// quedan la tarjeta de guia y una cabecera chica con la pista, la clase, el modo y los avisos.
-/// Bloqueada, los clics la atraviesan (WS_EX_TRANSPARENT). Compila, SIN EJECUTAR: nunca se abrio en Windows.
+/// <see cref="VistaOverlay"/> y el <see cref="CuadroUi"/> del Core (no tiene logica de estados). Fase 6: tarjetas de carbono
+/// con esquina cortada, cabecera ARRIBA (pista, clase, modo, FIJO / LIBRE y la tecla) y barra segmentada. Los botones
+/// (modo, engranaje, pin, cerrar) NO estan aca: son la ventana <see cref="VentanaBarra"/>, que se posiciona sobre
+/// <see cref="RectBarra"/>. Bloqueada, esta ventana conserva el click-through de la 5c (WS_EX_TRANSPARENT).
+/// Compila, SIN EJECUTAR: nunca se abrio en Windows.
 /// </summary>
 public partial class VentanaOverlay : Window
 {
@@ -25,6 +27,7 @@ public partial class VentanaOverlay : Window
 
     private string _firmaPanel = "";
     private double _anchoCifras;
+    private bool _contenidoVisible = true;
 
     /// <summary>El usuario termino de mover la ventana (DragMove).</summary>
     public event Action? Movida;
@@ -61,15 +64,41 @@ public partial class VentanaOverlay : Window
 
     // ---------------------------------------------------------------- bloqueo, escala, posicion
 
-    public void AplicarBloqueo(bool bloqueada, AtajoTeclado atajo)
+    /// <summary>Fija o libera: estilo click-through de la ventana grande, contorno y agarre, chip LIBRE y la etiqueta FIJO / LIBRE.</summary>
+    public void AplicarBloqueo(bool bloqueada, BarraBotones barra)
     {
         _bloqueada = bloqueada;
         if (_hwnd != IntPtr.Zero) Win32.AplicarEstiloOverlay(_hwnd, bloqueada);
-        PanelDesbloqueo.Visibility = bloqueada ? Visibility.Collapsed : Visibility.Visible;
+        ChipLibre.Visibility = barra.MostrarChipLibre ? Visibility.Visible : Visibility.Collapsed;
+        TxtChipLibre.Text = barra.TextoChipLibre;
         Contorno.Visibility = bloqueada ? Visibility.Collapsed : Visibility.Visible;
         Agarre.Visibility = bloqueada ? Visibility.Collapsed : Visibility.Visible;
-        TxtComoBloquear.Text = $"Bloquear: Bandeja › Bloquear overlay (o {atajo.Texto}).";
+        TxtEstadoPin.Text = barra.EtiquetaPin;
+        TxtEstadoPin.Foreground = Pincel.De(bloqueada ? Paleta.RojoEtiqueta : Paleta.ChipDesbloqueadoTexto);
+        TxtTecla.Text = barra.Atajo;
         _firmaPanel = "";      // fuerza repintar con la opacidad nueva
+    }
+
+    /// <summary>"Ocultar overlay": se esconde el contenido pero NO la ventana, para que la barra (su Owner) pueda dejar la pastilla del engranaje.</summary>
+    public void AplicarVisible(bool visible)
+    {
+        _contenidoVisible = visible;
+        Raiz.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Rectangulo (DIP de pantalla) donde va la ventana de botones: el hueco ReservaBarra de la cabecera, ya con la escala del overlay.
+    /// Null mientras el contenido esta oculto (se usa el ultimo conocido). Sin ejecutar.
+    /// </summary>
+    public Rect? RectBarra()
+    {
+        if (!_contenidoVisible || !IsVisible || !ReservaBarra.IsLoaded) return null;
+        try
+        {
+            var r = ReservaBarra.TransformToAncestor(this).TransformBounds(new Rect(0, 0, ReservaBarra.ActualWidth, ReservaBarra.ActualHeight));
+            return new Rect(Left + r.X, Top + r.Y, r.Width, r.Height);
+        }
+        catch (InvalidOperationException) { return null; }
     }
 
     public void AplicarEscala(double escala)
@@ -113,8 +142,9 @@ public partial class VentanaOverlay : Window
     {
         _alfa = cfg.Opacidad;
         double aPanel = MedidasUi.AlfaPanel(cfg.Opacidad, !_bloqueada);
-        Tarjeta.Background = Pincel.De(Paleta.Fondo, aPanel);
-        TarjetaCabecera.Background = Pincel.De(Paleta.Fondo, aPanel);
+        // el alfa va solo en los pinceles de fondo (y de la textura): el texto queda al 100 %
+        Tarjeta.Alfa = aPanel;
+        TarjetaCabecera.Alfa = aPanel;
 
         PintarTarjeta(c);
         PintarCabecera(v);
@@ -139,7 +169,7 @@ public partial class VentanaOverlay : Window
         if (p.TextoFranja is not null)
         {
             Franja.Background = Pincel.De(p.ColorFranja ?? Paleta.FranjaNeutra);
-            TxtFranja.Text = p.TextoFranja;
+            TxtFranja.Text = Estilo.Espaciado(p.TextoFranja);
             TxtFranja.Foreground = Pincel.De(p.ColorTextoFranja ?? Paleta.Blanco);
             TxtFranjaCurva.Text = p.CurvaTxt ?? "";
             TxtFranjaCurva.Foreground = Pincel.De(Paleta.Titulo);
@@ -149,6 +179,7 @@ public partial class VentanaOverlay : Window
         FilaEncabezado.Visibility = aproximando || hayVel ? Visibility.Visible : Visibility.Collapsed;
         TxtCurva.Visibility = p.TextoFranja is null ? Visibility.Visible : Visibility.Collapsed;
         TxtCurva.Text = p.CurvaTxt ?? "";
+        AcentoCurva.Visibility = aproximando ? Visibility.Visible : Visibility.Collapsed;
         TxtVelocidades.Text = p.VelocidadesTxt ?? "";
 
         PanelEtiquetas.Visibility = guia ? Visibility.Visible : Visibility.Collapsed;
@@ -183,7 +214,7 @@ public partial class VentanaOverlay : Window
         PanelAviso.Visibility = p.Tipo == TipoTarjeta.SinDatos ? Visibility.Visible : Visibility.Collapsed;
         if (p.Tipo == TipoTarjeta.SinDatos)
         {
-            TxtTitulo.Text = p.Titulo ?? "";
+            TxtTitulo.Text = Estilo.Espaciado(p.Titulo ?? "");
             TxtTitulo.Foreground = Pincel.De(p.ColorTitulo);
             TxtLinea1.Text = p.Linea1 ?? "";
             TxtLinea2.Text = p.Linea2 ?? "";
@@ -194,13 +225,11 @@ public partial class VentanaOverlay : Window
         if (p.Contadores is { } k)
         {
             TxtEncabContadores.Text = k.Encabezado + (k.SoloVos ? " · grabando solo vos" : " · grabando");
-            // solo vos: la columna de la IA se oculta y la tuya ocupa todo el ancho
-            ColContIa.Visibility = k.SoloVos ? Visibility.Collapsed : Visibility.Visible;
-            Grid.SetColumn(ColContVos, k.SoloVos ? 0 : 1);
-            Grid.SetColumnSpan(ColContVos, k.SoloVos ? 2 : 1);
-            ReponerEtiquetas(EtiquetaContIa, [EtiquetaRef.Ia]);
-            ReponerEtiquetas(EtiquetaContVos, [EtiquetaRef.Vos]);
-            TxtContIa.Text = k.Ia; TxtContIaDet.Text = k.IaDetalle;
+            // solo vos: la columna de la IA y los ":" se ocultan y la tuya ocupa todo el ancho
+            ColContIa.Visibility = TxtDosPuntos.Visibility = k.SoloVos ? Visibility.Collapsed : Visibility.Visible;
+            Grid.SetColumn(ColContVos, k.SoloVos ? 0 : 2);
+            Grid.SetColumnSpan(ColContVos, k.SoloVos ? 3 : 1);
+                        TxtContIa.Text = k.Ia; TxtContIaDet.Text = k.IaDetalle;
             TxtContVos.Text = k.Vos; TxtContVosDet.Text = k.VosDetalle;
             TxtPieContadores.Text = k.Pie;
         }
@@ -242,31 +271,45 @@ public partial class VentanaOverlay : Window
         }
     }
 
+    /// <summary>
+    /// Barra segmentada (UI-SPEC 7.3): 16 segmentos de 10 de alto con separacion de 3. Segmento 0 blanco = ahora; los segmentos hasta el
+    /// punto de frenado de la referencia principal, en gris; el resto, vacios; marca roja en el extremo. Rombo = IA y circulo = vos,
+    /// como cabezas de 14 px con tallo de 8. Alto total 32.
+    /// </summary>
     private void DibujarRegla(VistaPanel p)
     {
         var cv = CanvasRegla;
         cv.Children.Clear();
         double w = 292;       // ancho util de la tarjeta (320 - 2 x 14)
-        var fondo = new Border { Width = w, Height = 18, CornerRadius = new CornerRadius(4), Background = Pincel.De(Paleta.ReglaFondo) };
-        Canvas.SetTop(fondo, 11);
-        cv.Children.Add(fondo);
-        foreach (double f in new[] { 1 / 3.0, 2 / 3.0 })
+        int n = MedidasUi.SegmentosBarra;
+        double sep = MedidasUi.SeparacionSegmento, alto = MedidasUi.AltoSegmento;
+        double sw = (w - sep * (n - 1)) / n, top = 32 - alto;
+
+        var principal = p.Marcadores.FirstOrDefault(m => p.EtiquetasPrincipal.Count > 0 && m.Forma == p.EtiquetasPrincipal[0].Forma)
+            ?? (p.Marcadores.Count > 0 ? p.Marcadores[0] : null);
+        int corte = principal is null ? n - 1 : Math.Clamp((int)Math.Round(principal.Fraccion * n), 1, n - 1);
+
+        for (int i = 0; i < n; i++)
         {
-            var marca = new Rectangle { Width = 1, Height = 18, Fill = Pincel.De(Paleta.ReglaMarcas) };
-            Canvas.SetLeft(marca, w * f); Canvas.SetTop(marca, 11);
+            string color = i == 0 ? Paleta.Blanco : i < corte ? Paleta.SegmentoRecorrido : Paleta.ReglaFondo;
+            var seg = new Rectangle { Width = sw, Height = alto, Fill = Pincel.De(color) };
+            Canvas.SetLeft(seg, i * (sw + sep)); Canvas.SetTop(seg, top);
+            cv.Children.Add(seg);
+        }
+        if (principal is not null)
+        {
+            var marca = new Rectangle { Width = 2, Height = alto + 4, Fill = Pincel.De(Paleta.RojoFranja) };
+            Canvas.SetLeft(marca, corte * (sw + sep) - sep / 2 - 1); Canvas.SetTop(marca, top - 2);
             cv.Children.Add(marca);
         }
-        var ahora = new Ellipse { Width = 10, Height = 10, Fill = Pincel.De(Paleta.Blanco) };
-        Canvas.SetLeft(ahora, 4); Canvas.SetTop(ahora, 15);
-        cv.Children.Add(ahora);
         foreach (var m in p.Marcadores)
         {
-            double x = 10 + (w - 20) * m.Fraccion;
-            var linea = new Rectangle { Width = 4, Height = 24, Fill = Pincel.De(m.Color), RadiusX = 1, RadiusY = 1 };
-            Canvas.SetLeft(linea, x - 2); Canvas.SetTop(linea, 8);
-            cv.Children.Add(linea);
-            var cab = Forma(m.Forma, m.Color, 9);
-            Canvas.SetLeft(cab, x - 4.5); Canvas.SetTop(cab, 0);
+            double x = Math.Clamp(w * m.Fraccion, 7, w - 7);
+            var tallo = new Rectangle { Width = 2, Height = 8, Fill = Pincel.De(m.Color) };
+            Canvas.SetLeft(tallo, x - 1); Canvas.SetTop(tallo, 14);
+            cv.Children.Add(tallo);
+            var cab = Forma(m.Forma, m.Color, 14);
+            Canvas.SetLeft(cab, x - 7); Canvas.SetTop(cab, 0);
             cv.Children.Add(cab);
         }
     }

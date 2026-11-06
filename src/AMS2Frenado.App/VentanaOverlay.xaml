@@ -1,6 +1,7 @@
 <Window x:Class="AMS2Frenado.App.VentanaOverlay"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:AMS2Frenado.App"
         Title="AMS2 Asistente de Frenado - Overlay"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
@@ -13,29 +14,62 @@
             <ScaleTransform x:Name="Escala" ScaleX="1" ScaleY="1"/>
         </Grid.LayoutTransform>
         <StackPanel>
-            <!-- ventana desbloqueada: chip + como volver (UI-SPEC pantalla 12) -->
-            <Border x:Name="PanelDesbloqueo" Visibility="Collapsed" Background="#0C0E11" CornerRadius="10" Padding="12,10" Margin="0,0,0,8">
+            <!-- cabecera ARRIBA de la tarjeta (UI-SPEC 7.4): pista y chips, y la fila de la barra. Los botones son OTRA ventana
+                 (VentanaBarra) que se posiciona sobre ReservaBarra; aca solo se reserva el lugar y se dibuja FIJO / LIBRE + la tecla. -->
+            <local:PanelCarbono x:Name="TarjetaCabecera" Relleno="12,10,12,10" Margin="0,0,0,8">
                 <StackPanel>
-                    <Border Background="#17304D" CornerRadius="4" Padding="8,3" HorizontalAlignment="Left">
-                        <TextBlock Text="DESBLOQUEADO · arrastrá para mover" FontFamily="{StaticResource Inter}" FontSize="11" FontWeight="SemiBold" Foreground="#8CC3FF"/>
+                    <Border x:Name="ChipLibre" Visibility="Collapsed" Background="#17304D" Padding="8,3" Margin="0,0,0,6" HorizontalAlignment="Left">
+                        <TextBlock x:Name="TxtChipLibre" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="SemiBold" Foreground="#8CC3FF"/>
                     </Border>
-                    <TextBlock x:Name="TxtComoBloquear" Margin="0,8,0,0" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
+                    <Grid Height="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="TxtTituloPista" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0"
+                                   FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC" TextTrimming="CharacterEllipsis"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Border x:Name="ChipClase" Background="#2A3139" Padding="6,1" Margin="0,0,6,0">
+                                <TextBlock x:Name="TxtChipClase" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="SemiBold" Foreground="#EEF1F4"/>
+                            </Border>
+                            <Border x:Name="ChipModo" Padding="6,1">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse x:Name="PuntoChipModo" Width="7" Height="7" Fill="#FF5A4E" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TxtChipModo" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                    <Grid Height="32">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <TextBlock x:Name="TxtEstadoPin" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <Border Background="#2A3139" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="TxtTecla" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="SemiBold" Foreground="#EEF1F4"/>
+                            </Border>
+                        </StackPanel>
+                        <Border x:Name="ReservaBarra" Width="140" Height="32" HorizontalAlignment="Right" Background="Transparent" IsHitTestVisible="False"/>
+                    </Grid>
+                    <TextBlock x:Name="TxtAviso" Margin="0,6,0,0" Visibility="Collapsed" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#FF9C94"/>
                 </StackPanel>
-            </Border>
+            </local:PanelCarbono>
 
             <!-- tarjeta de guia / lejos / sin datos / grabando -->
-            <Border x:Name="Tarjeta" CornerRadius="10" Margin="0,0,0,8" Visibility="Collapsed">
+            <local:PanelCarbono x:Name="Tarjeta" Margin="0,0,0,8" Visibility="Collapsed">
                 <StackPanel>
-                    <Border x:Name="Franja" Height="40" CornerRadius="9,9,0,0" Visibility="Collapsed">
+                    <Border x:Name="Franja" Height="40" Visibility="Collapsed">
                         <Grid Margin="14,0">
                             <TextBlock x:Name="TxtFranja" VerticalAlignment="Center" FontFamily="{StaticResource Barlow}" FontWeight="Bold" FontSize="30"/>
                             <TextBlock x:Name="TxtFranjaCurva" VerticalAlignment="Center" HorizontalAlignment="Right" FontFamily="{StaticResource Barlow}" FontWeight="Bold" FontSize="22"/>
                         </Grid>
                     </Border>
-                    <StackPanel x:Name="Cuerpo" Margin="14,12,14,14">
+                    <StackPanel x:Name="Cuerpo" Margin="14,12,14,18">
                         <!-- Aproximacion / Inminente: encabezado -->
                         <Grid x:Name="FilaEncabezado" Margin="0,0,0,4">
-                            <TextBlock x:Name="TxtCurva" FontFamily="{StaticResource Barlow}" FontWeight="Bold" FontSize="22" Foreground="#EEF1F4"/>
+                            <StackPanel>
+                                <TextBlock x:Name="TxtCurva" FontFamily="{StaticResource Barlow}" FontWeight="Bold" FontSize="22" Foreground="#EEF1F4"/>
+                                <!-- acento rojo de 28 x 3 (UI-SPEC 7.2) -->
+                                <Rectangle x:Name="AcentoCurva" Width="28" Height="3" Fill="#C62F26" HorizontalAlignment="Left" Margin="0,2,0,0"/>
+                            </StackPanel>
                             <TextBlock x:Name="TxtVelocidades" HorizontalAlignment="Right" VerticalAlignment="Center" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
                         </Grid>
                         <!-- leyenda de referencias: rombo IA / circulo VOS (siempre, tambien en la frenada) -->
@@ -80,21 +114,22 @@
                             <TextBlock x:Name="TxtLinea2" Margin="0,6,0,0" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="13" Foreground="#A9B2BC"/>
                         </StackPanel>
 
-                        <!-- GRABANDO: contadores -->
+                        <!-- GRABANDO: cifras de 44 separadas por ":" con etiqueta roja (UI-SPEC 7.3) -->
                         <StackPanel x:Name="PanelContadores">
                             <TextBlock x:Name="TxtEncabContadores" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
                             <Grid Margin="0,8,0,0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel x:Name="ColContIa" Grid.Column="0">
-                                    <StackPanel x:Name="EtiquetaContIa" Orientation="Horizontal"/>
-                                    <TextBlock x:Name="TxtContIa" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="26" Foreground="#EEF1F4"/>
+                                    <TextBlock x:Name="TxtEtiquetaContIa" Text="IA · VUELTAS" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="Bold" Foreground="#FF8A80"/>
+                                    <TextBlock x:Name="TxtContIa" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="44" Foreground="#EEF1F4" LineStackingStrategy="BlockLineHeight" LineHeight="46"/>
                                     <TextBlock x:Name="TxtContIaDet" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
                                 </StackPanel>
-                                <StackPanel x:Name="ColContVos" Grid.Column="1">
-                                    <StackPanel x:Name="EtiquetaContVos" Orientation="Horizontal"/>
-                                    <TextBlock x:Name="TxtContVos" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="26" Foreground="#EEF1F4"/>
+                                <TextBlock x:Name="TxtDosPuntos" Grid.Column="1" Text=":" Margin="10,16,10,0" VerticalAlignment="Top" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="44" Foreground="#A9B2BC" LineStackingStrategy="BlockLineHeight" LineHeight="46"/>
+                                <StackPanel x:Name="ColContVos" Grid.Column="2">
+                                    <TextBlock x:Name="TxtEtiquetaContVos" Text="VOS · VÁLIDAS" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="Bold" Foreground="#FF8A80"/>
+                                    <TextBlock x:Name="TxtContVos" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="44" Foreground="#EEF1F4" LineStackingStrategy="BlockLineHeight" LineHeight="46"/>
                                     <TextBlock x:Name="TxtContVosDet" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
                                 </StackPanel>
                             </Grid>
@@ -102,37 +137,12 @@
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </local:PanelCarbono>
 
-            <!-- cabecera: pista, chip de la clase, chip de modo y avisos (el mini mapa ya no existe) -->
-            <Border x:Name="TarjetaCabecera" CornerRadius="10" Padding="12,8">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="TxtTituloPista" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0"
-                                   FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC" TextTrimming="CharacterEllipsis"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Border x:Name="ChipClase" Background="#2A3139" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
-                                <TextBlock x:Name="TxtChipClase" FontFamily="{StaticResource Inter}" FontSize="11" FontWeight="SemiBold" Foreground="#EEF1F4"/>
-                            </Border>
-                            <Border x:Name="ChipModo" CornerRadius="4" Padding="6,2">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse x:Name="PuntoChipModo" Width="7" Height="7" Fill="#FF5A4E" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="TxtChipModo" FontFamily="{StaticResource Inter}" FontSize="11" FontWeight="SemiBold"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Grid>
-                    <TextBlock x:Name="TxtAviso" Margin="0,6,0,0" Visibility="Collapsed" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#FF9C94"/>
-                </StackPanel>
-            </Border>
         </StackPanel>
 
         <!-- contorno discontinuo azul mientras esta desbloqueada -->
-        <Rectangle x:Name="Contorno" Visibility="Collapsed" IsHitTestVisible="False" RadiusX="12" RadiusY="12"
+        <Rectangle x:Name="Contorno" Visibility="Collapsed" IsHitTestVisible="False" RadiusX="0" RadiusY="0"
                    Stroke="#5AA9FF" StrokeThickness="2" StrokeDashArray="3 3" Margin="-1"/>
         <!-- agarre para cambiar el tamano (solo desbloqueada) -->
         <Thumb x:Name="Agarre" Width="18" Height="18" HorizontalAlignment="Right" VerticalAlignment="Bottom" Visibility="Collapsed"

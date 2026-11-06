@@ -350,3 +350,73 @@ public class TextosSinBandejaTests
         Assert.Contains("⚙ › Datos", textos[2]);
     }
 }
+
+public class PosicionMenuTests
+{
+    private static readonly AreaPantalla Pantalla = new(0, 0, 1920, 1040);
+
+    [Fact]
+    public void AbreAbajoAlineadoALaDerechaDeLaBarra()
+    {
+        var barra = new AreaPantalla(1400, 40, 140, 32);
+        var (x, y) = Esquinas.PosicionMenu(barra, Pantalla, 624, 540);
+        Assert.Equal(1540 - 624, x);
+        Assert.Equal(72 + 6, y);
+    }
+
+    [Fact]
+    public void SiAbajoNoEntraAbreArriba()
+    {
+        var barra = new AreaPantalla(1400, 900, 140, 32);
+        var (_, y) = Esquinas.PosicionMenu(barra, Pantalla, 624, 540);
+        Assert.Equal(900 - 6 - 540, y);
+    }
+
+    [Fact]
+    public void SiNoHayLugarALaIzquierdaAlineaAlBordeIzquierdoDeLaBarra()
+    {
+        var barra = new AreaPantalla(100, 40, 140, 32);
+        var (x, _) = Esquinas.PosicionMenu(barra, Pantalla, 624, 540);
+        Assert.Equal(100, x);
+    }
+
+    [Fact]
+    public void SiguePosicionadoDentroDeLaPantallaYLaPantallaChicaPasaAUnaColumna()
+    {
+        var chica = new AreaPantalla(0, 0, 700, 500);
+        var (x, y) = Esquinas.PosicionMenu(new AreaPantalla(500, 20, 140, 32), chica, 624, 540);
+        Assert.True(x >= 0 && x + 624 <= 700 + 1e-9 || 624 > 700);
+        Assert.True(y >= 0);
+        Assert.True(Esquinas.MenuEnUnaColumna(chica));
+        Assert.False(Esquinas.MenuEnUnaColumna(Pantalla));
+    }
+}
+
+public class ConfirmacionTemporizadaTests
+{
+    [Fact]
+    public void PedirConfirmarYCancelar()
+    {
+        var c = new ConfirmacionTemporizada();
+        Assert.False(c.Confirmar());                       // sin pedir, no confirma
+        c.Pedir(10);
+        Assert.True(c.Activa);
+        Assert.True(c.Confirmar());
+        Assert.False(c.Activa);
+        c.Pedir(20); c.Cancelar();
+        Assert.False(c.Confirmar());
+    }
+
+    [Fact]
+    public void SeCancelaSolaALos5SegundosYLaFraccionBaja()
+    {
+        var c = new ConfirmacionTemporizada();
+        c.Pedir(0);
+        Assert.Equal(1.0, c.FraccionRestante(0), 6);
+        Assert.Equal(0.5, c.FraccionRestante(2.5), 6);
+        Assert.False(c.Actualizar(4.99));
+        Assert.True(c.Actualizar(5.0));
+        Assert.False(c.Activa);
+        Assert.Equal(0, c.FraccionRestante(6));
+    }
+}

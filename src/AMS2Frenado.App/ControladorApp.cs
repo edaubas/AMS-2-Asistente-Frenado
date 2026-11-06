@@ -28,6 +28,12 @@ internal sealed class ControladorApp : IDisposable
     private readonly DispatcherTimer _timer = new(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(16) };
     private readonly VentanaOverlay _ventana = new();
     private readonly VentanaAviso _aviso = new();
+    // fase 6: modelos del Core (con pruebas) y las dos ventanas nuevas, que se crean en Iniciar() cuando la ventana grande ya existe (Owner)
+    private readonly BarraBotones _modeloBarra = new();
+    private readonly MenuConfig _modeloMenu = new();
+    private VentanaBarra _barra = null!;
+    private VentanaMenu _menu = null!;
+    private Rect? _ultimaReserva;
     private readonly Pitido _pitido = new();
     private readonly Bandeja _bandeja = new();
     private readonly AtajoGlobal _atajo = new();
@@ -45,14 +51,15 @@ internal sealed class ControladorApp : IDisposable
         AplicarAlServicio();
 
         _ventana.AplicarEscala(_cfg.Escala);
-        _ventana.AplicarBloqueo(_cfg.Bloqueado, _cfg.AtajoEfectivo);
+        SincronizarModeloBarra();
+        _ventana.AplicarBloqueo(_cfg.Bloqueado, _modeloBarra);
         _aviso.AplicarEscala(_cfg.AvisoEscala);
         _aviso.AplicarBloqueo(_cfg.Bloqueado);
         _aviso.Movida += AlMoverAviso;
-        _aviso.EscalaCambiada += e => { _cfg.AvisoEscala = e; Guardar(); _bandeja.Actualizar(_cfg, _atajo.Actual); };
+        _aviso.EscalaCambiada += e => { _cfg.AvisoEscala = e; Guardar(); _bandeja.Actualizar(_cfg, _atajo.Actual); RefrescarMenu(); };
         _ventana.SizeChanged += (_, _) => { if (_anclada) Anclar(); };
         _ventana.Movida += AlMoverVentana;
-        _ventana.EscalaCambiada += e => { _cfg.Escala = e; Guardar(); _bandeja.Actualizar(_cfg, _atajo.Actual); if (_anclada) Anclar(); };
+        _ventana.EscalaCambiada += e => { _cfg.Escala = e; Guardar(); _bandeja.Actualizar(_cfg, _atajo.Actual); RefrescarMenu(); if (_anclada) Anclar(); };
 
         _atajo.Pulsado += () => Alternar(() => _cfg.Bloqueado = !_cfg.Bloqueado, aplicarBloqueo: true);
         ConectarBandeja();
@@ -63,24 +70,35 @@ internal sealed class ControladorApp : IDisposable
     {
         PosicionInicial();
         PosicionInicialAviso();
-        _ventana.Show();                      // se muestra siempre una vez (para tener hwnd y estilos); se oculta abajo si hace falta
-        if (!_cfg.Visible) _ventana.Hide();
+        _ventana.Show();                      // la ventana grande queda siempre abierta: "ocultar" solo esconde su contenido, asi la barra (su Owner) puede dejar la pastilla
+        _ventana.AplicarVisible(_cfg.Visible);
+        _barra = new VentanaBarra(_ventana);
+        _barra.Pulsado += AlPulsarBoton;
+        _barra.ModoElegido += AlElegirModoPopover;
+        _barra.CierreConfirmado += () => { if (_modeloBarra.ConfirmarCierre() == AccionBarra.CerrarApp) Salir(); };
+        _barra.CierreCancelado += () => { _modeloBarra.CancelarCierre(); SincronizarBarra(); };
+        _menu = new VentanaMenu { Reloj = () => _reloj.Elapsed.TotalSeconds };
+        ConectarMenu();
+        SincronizarBarra();
+        _barra.Show();
+        _menu.Owner = _barra;
         // la ventana del aviso queda abierta y transparente (opacidad 0): asi no hay parpadeo al aparecer, solo el fundido
         _aviso.Show();
 
         bool atajoOk = _atajo.Registrar(_cfg.AtajoEfectivo);
         _bandeja.Actualizar(_cfg, _atajo.Actual);
+        RefrescarMenu();
         _timer.Start();
 
         if (!atajoOk)
             _bandeja.Globo("Atajo no disponible",
                 $"No se pudo registrar {_cfg.AtajoEfectivo.Texto} (otro programa ya lo usa). La app sigue funcionando: " +
-                "bloqueá y desbloqueá desde el ícono de la bandeja, o elegí otro atajo en el menú.", error: true);
+                "fijá y liberá el overlay con el botón de la chincheta (o desde la bandeja), o elegí otro atajo en ⚙ › Atajo de bloqueo.", error: true);
         else if (!_cfg.AvisoInicialMostrado)
         {
             _bandeja.Globo("AMS2 Asistente de Frenado",
-                $"El overlay está bloqueado: los clics lo atraviesan. El ícono está en la bandeja (en Windows 11 suele quedar " +
-                $"oculto en la flecha ^ de la barra de tareas). Atajo para bloquear/desbloquear: {_cfg.AtajoEfectivo.Texto}.");
+                $"El overlay está fijado: los clics lo atraviesan, salvo los botones de arriba (⇄ modo, ⚙ ajustes, chincheta, ✕). " +
+                $"Atajo para fijar/liberar: {_cfg.AtajoEfectivo.Texto}. La bandeja queda como respaldo (en Windows 11 suele quedar oculta en la flecha ^).");
         }
         if (!_cfg.AvisoInicialMostrado) { _cfg.AvisoInicialMostrado = true; Guardar(); }
         if (_almacenCfg.LecturaDanada)
@@ -108,8 +126,13 @@ internal sealed class ControladorApp : IDisposable
             {
                 var cuadro = _suavizador.Actualizar(v.Panel, t);
                 _ventana.Pintar(v, cuadro, _cfg);
-                if (t - _ultimaReafirmacion > 2) { _ultimaReafirmacion = t; _ventana.ReafirmarArriba(); _aviso.ReafirmarArriba(); }
             }
+            if (t - _ultimaReafirmacion > 2)
+            {
+                _ultimaReafirmacion = t; _ventana.ReafirmarArriba(); _aviso.ReafirmarArriba(); _barra.ReafirmarArriba();
+                if (_menu.IsVisible) _menu.Topmost = true;
+            }
+            TickFase6(t);
             // el aviso se actualiza en cada tick (60 Hz) aunque la telemetria llegue a ~27 Hz, para que el fundido de 80 ms sea fluido.
             // El simbolo y el pitido de una prueba salen del mismo cuadro; el de pista, de la misma muestra (v.Pitar, arriba).
             var cuadroAviso = _servicio.ActualizarAviso(t);
@@ -152,10 +175,10 @@ internal sealed class ControladorApp : IDisposable
         cambio();
         _cfg.Normalizar();
         AplicarAlServicio();
-        if (aplicarBloqueo) { _ventana.AplicarBloqueo(_cfg.Bloqueado, _cfg.AtajoEfectivo); _aviso.AplicarBloqueo(_cfg.Bloqueado); }
-        if (_cfg.Visible && !_ventana.IsVisible) _ventana.Show();
-        if (!_cfg.Visible && _ventana.IsVisible) _ventana.Hide();
+        if (aplicarBloqueo) AplicarBloqueoAVentanas();
+        AplicarVisibleAVentana();
         _bandeja.Actualizar(_cfg, _atajo.Actual);
+        RefrescarMenu();
         Guardar();
     }
 
@@ -180,26 +203,178 @@ internal sealed class ControladorApp : IDisposable
             _ventana.AplicarEscala(_cfg.Escala);
             if (_anclada) Anclar();
         };
-        _bandeja.AtajoElegido += texto =>
-        {
-            var nuevo = AtajoTeclado.Parsear(texto);
-            if (nuevo is null) return;
-            if (_atajo.Registrar(nuevo))
-            {
-                Alternar(() => _cfg.Atajo = nuevo.Texto, aplicarBloqueo: true);
-            }
-            else
-            {
-                _atajo.Registrar(_cfg.AtajoEfectivo);
-                _bandeja.Globo("Atajo no disponible", $"{nuevo.Texto} ya lo usa otro programa. Se mantiene {_cfg.AtajoEfectivo.Texto}.", error: true);
-            }
-        };
+        _bandeja.AtajoElegido += ElegirAtajo;
         _bandeja.AbrirCarpeta += () => _bandeja.AbrirEnExplorador(_almacen.RutaBase);
         _bandeja.AbrirCarpetaCapturas += () => _bandeja.AbrirEnExplorador(CarpetaCapturas);
         _bandeja.ExportarDatos += ExportarDatos;
         _bandeja.ImportarDatos += ImportarDatos;
         _bandeja.AbrirDiagnostico += AbrirDiagnostico;
         _bandeja.Salir += Salir;
+    }
+
+    private void ElegirAtajo(string texto)
+    {
+        var nuevo = AtajoTeclado.Parsear(texto);
+        if (nuevo is null) return;
+        if (_atajo.Registrar(nuevo))
+        {
+            Alternar(() => _cfg.Atajo = nuevo.Texto, aplicarBloqueo: true);
+        }
+        else
+        {
+            _atajo.Registrar(_cfg.AtajoEfectivo);
+            _bandeja.Globo("Atajo no disponible", $"{nuevo.Texto} ya lo usa otro programa. Se mantiene {_cfg.AtajoEfectivo.Texto}.", error: true);
+        }
+    }
+
+    // ---------------------------------------------------------------- fase 6: barra de botones y menu de configuracion (compila, sin ejecutar)
+
+    private double Ahora => _reloj.Elapsed.TotalSeconds;
+
+    private void SincronizarModeloBarra()
+    {
+        _modeloBarra.Fijado = _cfg.Bloqueado;
+        _modeloBarra.Modo = _cfg.Modo;
+        _modeloBarra.Atajo = _cfg.AtajoEfectivo.Texto;
+        _modeloBarra.Oculto = !_cfg.Visible;
+        _modeloBarra.FijarMenuAbierto(_modeloMenu.Abierto);
+    }
+
+    /// <summary>Fijar / liberar: la ventana grande cambia de estilo (click-through) y las etiquetas; la de botones sigue activa siempre.</summary>
+    private void AplicarBloqueoAVentanas()
+    {
+        SincronizarModeloBarra();
+        _ventana.AplicarBloqueo(_cfg.Bloqueado, _modeloBarra);
+        _aviso.AplicarBloqueo(_cfg.Bloqueado);
+    }
+
+    private void AplicarVisibleAVentana()
+    {
+        _ventana.AplicarVisible(_cfg.Visible);
+        if (_modeloMenu.Abierto && _modeloBarra.Oculto != !_cfg.Visible) CerrarMenu();       // ocultar o mostrar el overlay cierra el menu
+        SincronizarBarra();
+    }
+
+    /// <summary>Estimacion de donde cae el hueco de la barra cuando la ventana grande no tiene contenido visible (pastilla).</summary>
+    private Rect ReservaEstimada()
+    {
+        double s = _cfg.Escala;
+        double ancho = MedidasUi.AnchoDeEscala(s);
+        return new Rect(_ventana.Left + ancho - (12 + 140) * s, _ventana.Top + (10 + 20) * s, 140 * s, 32 * s);
+    }
+
+    /// <summary>Redibuja la barra si cambio el estado y la pone sobre el hueco de la cabecera (borde derecho y superior fijos).</summary>
+    private void SincronizarBarra()
+    {
+        SincronizarModeloBarra();
+        _barra.Refrescar(_modeloBarra, _cfg.Escala);
+        var r = _ventana.RectBarra() ?? ReservaEstimada();
+        _ultimaReserva = r;
+        double bs = _barra.EscalaBarra;
+        // centrada en vertical dentro del hueco; si la barra es mas grande que el hueco (escala < 0,875) sobresale parejo
+        _barra.Posicionar(r.Right, r.Top + (r.Height - MedidasUi.BarraAlto * bs) / 2);
+    }
+
+    private void TickFase6(double t)
+    {
+        _modeloBarra.Actualizar(t);
+        SincronizarBarra();
+        _barra.ActualizarProgreso(_modeloBarra.FraccionRestante(t));
+        if (_modeloMenu.Abierto)
+        {
+            _menu.ActualizarSalir(t);
+            if (_modeloMenu.Actualizar(t, _menu.MouseAdentro)) CerrarMenu(yaCerrado: true);
+        }
+        if (_modeloMenu.DebeGuardar(t)) Guardar();
+    }
+
+    private void AlPulsarBoton(BotonBarra boton)
+    {
+        switch (_modeloBarra.Pulsar(boton, Ahora))
+        {
+            case AccionBarra.AlternarFijado:
+                _cfg.Bloqueado = _modeloBarra.Fijado;
+                Alternar(() => { }, aplicarBloqueo: true);
+                break;
+            case AccionBarra.AlternarMenu:
+                if (_modeloBarra.MenuAbierto) AbrirMenu(); else CerrarMenu();
+                break;
+        }
+        SincronizarBarra();
+    }
+
+    private void AlElegirModoPopover(ModoApp modo)
+    {
+        if (_modeloBarra.ElegirModo(modo) == AccionBarra.CambiarModo) Alternar(() => _cfg.Modo = modo);
+        SincronizarBarra();
+    }
+
+    private void RefrescarMenu() => _menu?.Actualizar(_cfg, _cfg.AtajoEfectivo.Texto, !_cfg.Visible);
+
+    private void AbrirMenu()
+    {
+        _modeloMenu.Abrir(Ahora);
+        _modeloBarra.FijarMenuAbierto(true);
+        RefrescarMenu();
+        var (_, area) = MonitorDe(_barra);
+        double alto = _menu.ActualHeight > 0 ? _menu.ActualHeight : 600;
+        var rb = new AreaPantalla(_barra.Left, _barra.Top, _barra.Width, _barra.Height);
+        bool una = Esquinas.MenuEnUnaColumna(area);
+        double ancho = una ? 352 : MedidasUi.MenuAncho;
+        var (x, y) = Esquinas.PosicionMenu(rb, area, ancho, alto);
+        _menu.AbrirEn(x, y, una, area.Alto);
+        // una sola vez, con el alto real ya medido: se corrige si se salia de la pantalla (despues no se mueve)
+        _menu.Dispatcher.BeginInvoke(() =>
+        {
+            if (!_menu.IsVisible) return;
+            var (x2, y2) = Esquinas.PosicionMenu(rb, area, _menu.ActualWidth, _menu.ActualHeight);
+            _menu.Left = x2; _menu.Top = y2;
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void CerrarMenu(bool yaCerrado = false)
+    {
+        if (!yaCerrado) _modeloMenu.Cerrar();
+        _modeloBarra.FijarMenuAbierto(false);
+        _menu.CerrarAnimado();
+        if (_modeloMenu.DebeGuardarYa()) Guardar();       // un deslizador movido hace menos de 500 ms: se guarda sin esperar
+        SincronizarBarra();
+    }
+
+    /// <summary>Enlaza el menu con la misma logica de la bandeja (que queda como respaldo): una sola implementacion por opcion.</summary>
+    private void ConectarMenu()
+    {
+        _menu.CerrarPulsado += () => { _modeloBarra.FijarMenuAbierto(false); CerrarMenu(); };
+        _menu.AlternarFijar += () => Alternar(() => _cfg.Bloqueado = !_cfg.Bloqueado, aplicarBloqueo: true);
+        _menu.AlternarAviso += () => Alternar(() => _cfg.AvisoActivo = !_cfg.AvisoActivo);
+        _menu.AlternarPitido += () => Alternar(() => _cfg.Pitido = !_cfg.Pitido);
+        _menu.ProbarAviso += () => _servicio.ProbarAviso(Ahora);
+        _menu.ProbarPitido += () => _servicio.ProbarPitido(Ahora);
+        _menu.AlternarVisible += () => Alternar(() => _cfg.Visible = !_cfg.Visible);
+        _menu.ModoElegido += m => Alternar(() => _cfg.Modo = m);
+        _menu.ReferenciaElegida += r => Alternar(() => _cfg.ReferenciaPrincipal = r);
+        _menu.AtajoElegido += ElegirAtajo;
+        _menu.PaginaPedida += p =>
+        {
+            if (p == PaginaMenu.Principal) _modeloMenu.Volver(); else _modeloMenu.IrA(p);
+            _menu.MostrarPagina(_modeloMenu.Pagina);
+        };
+        _menu.AbrirCarpeta += () => _bandeja.AbrirEnExplorador(_almacen.RutaBase);
+        _menu.AbrirCarpetaCapturas += () => _bandeja.AbrirEnExplorador(CarpetaCapturas);
+        _menu.ExportarDatos += ExportarDatos;
+        _menu.ImportarDatos += ImportarDatos;
+        _menu.AbrirDiagnostico += AbrirDiagnostico;
+        _menu.SalirConfirmado += Salir;
+        // deslizadores: se aplican en vivo y el config.json se guarda 500 ms despues del ultimo cambio (no en cada movimiento)
+        _menu.Deslizado += (def, valor) =>
+        {
+            def.Aplicar(_cfg, valor);
+            AplicarAlServicio();
+            if (def == MenuConfig.Tamano) { _ventana.AplicarEscala(_cfg.Escala); if (_anclada) Anclar(); }
+            if (def == MenuConfig.TamanoAviso) _aviso.AplicarEscala(_cfg.AvisoEscala);
+            _bandeja.Actualizar(_cfg, _atajo.Actual);
+            _modeloMenu.MarcarCambio(Ahora);
+        };
     }
 
     private void AbrirDiagnostico()
@@ -338,7 +513,7 @@ internal sealed class ControladorApp : IDisposable
     {
         if (_cfg.Modo != ModoApp.Mostrar)
         {
-            _bandeja.Globo("Importar datos", "Pasá primero a Modo › Mostrar: mientras se graba (todo o solo vos) el programa podría pisar lo importado.", error: true);
+            _bandeja.Globo("Importar datos", "Pasá primero a Mostrar (botón ⇄ del overlay): mientras se graba (todo o solo vos) el programa podría pisar lo importado.", error: true);
             return;
         }
         try
@@ -383,11 +558,10 @@ internal sealed class ControladorApp : IDisposable
         AplicarAlServicio();
         _ventana.AplicarEscala(_cfg.Escala);
         _aviso.AplicarEscala(_cfg.AvisoEscala);
-        _ventana.AplicarBloqueo(_cfg.Bloqueado, _cfg.AtajoEfectivo);
-        _aviso.AplicarBloqueo(_cfg.Bloqueado);
+        AplicarBloqueoAVentanas();
         if (!string.Equals(_atajo.Actual?.Texto, _cfg.AtajoEfectivo.Texto, StringComparison.OrdinalIgnoreCase)) _atajo.Registrar(_cfg.AtajoEfectivo);
-        if (_cfg.Visible && !_ventana.IsVisible) _ventana.Show();
-        if (!_cfg.Visible && _ventana.IsVisible) _ventana.Hide();
+        AplicarVisibleAVentana();
+        RefrescarMenu();
         _bandeja.Actualizar(_cfg, _atajo.Actual);
         Guardar();
     }
@@ -410,6 +584,8 @@ internal sealed class ControladorApp : IDisposable
         _atajo.Dispose();
         _bandeja.Dispose();
         _diagnostico?.Close();
+        _menu?.Close();
+        _barra?.Close();
         _aviso.Close();
         _ventana.Close();
         _lector.Dispose();

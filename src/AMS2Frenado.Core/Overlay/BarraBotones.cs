@@ -51,6 +51,28 @@ public static class TextosBarra
 }
 
 /// <summary>
+/// Doble paso con autocancelacion (la X de la barra y "Salir" del menu): se pide, y se confirma o se cancela; si no pasa nada
+/// en <see cref="BarraBotones.CancelarCierreS"/> s se cancela solo. Logica pura: el tiempo llega por parametro.
+/// </summary>
+public sealed class ConfirmacionTemporizada
+{
+    private double _t;
+    public bool Activa { get; private set; }
+    public void Pedir(double t) { Activa = true; _t = t; }
+    public void Cancelar() => Activa = false;
+    /// <summary>Verdadero si estaba activa (y deja de estarlo).</summary>
+    public bool Confirmar() { bool era = Activa; Activa = false; return era; }
+    /// <summary>Cancela si pasaron <see cref="BarraBotones.CancelarCierreS"/> s. Devuelve verdadero si cambio algo.</summary>
+    public bool Actualizar(double t)
+    {
+        if (!Activa || t - _t < BarraBotones.CancelarCierreS) return false;
+        Activa = false; return true;
+    }
+    /// <summary>Fraccion que queda de la barra fina (1 al pedir, 0 a los 5 s); 0 si no esta activa.</summary>
+    public double FraccionRestante(double t) => Activa ? Math.Clamp(1 - (t - _t) / BarraBotones.CancelarCierreS, 0, 1) : 0;
+}
+
+/// <summary>
 /// Modelo de la barra de botones de la fase 6: modo, ajustes, fijar y cerrar (UI-SPEC 7.4). Logica pura, sin WPF ni reloj:
 /// el tiempo (segundos) llega por parametro. Reglas:
 ///  - El engranaje, el pin, el modo y la X funcionan SIEMPRE, tambien con el overlay fijado: "fijado" solo es no mover ni
@@ -65,7 +87,7 @@ public sealed class BarraBotones
     /// <summary>La confirmacion de cierre se cancela sola a los 5 s.</summary>
     public const double CancelarCierreS = 5.0;
 
-    private double _tConfirmacion;
+    private readonly ConfirmacionTemporizada _cierre = new();
 
     public bool Fijado { get; set; } = true;
     public ModoApp Modo { get; set; } = ModoApp.Mostrar;
@@ -78,7 +100,7 @@ public sealed class BarraBotones
 
     public bool MenuAbierto { get; private set; }
     public bool PopoverModoAbierto { get; private set; }
-    public bool ConfirmandoCierre { get; private set; }
+    public bool ConfirmandoCierre => _cierre.Activa;
     /// <summary>Modo elegido en el popover; valido tras <see cref="AccionBarra.CambiarModo"/>.</summary>
     public ModoApp ModoElegido { get; private set; }
 
@@ -114,22 +136,22 @@ public sealed class BarraBotones
         switch (boton)
         {
             case BotonBarra.Ajustes:
-                PopoverModoAbierto = false; ConfirmandoCierre = false;
+                PopoverModoAbierto = false; _cierre.Cancelar();
                 MenuAbierto = !MenuAbierto;
                 return AccionBarra.AlternarMenu;
             case BotonBarra.Fijar:
-                PopoverModoAbierto = false; ConfirmandoCierre = false;
+                PopoverModoAbierto = false; _cierre.Cancelar();
                 Fijado = !Fijado;
                 return AccionBarra.AlternarFijado;
             case BotonBarra.Modo:
-                ConfirmandoCierre = false;
+                _cierre.Cancelar();
                 PopoverModoAbierto = !PopoverModoAbierto;
                 return AccionBarra.Ninguna;
             case BotonBarra.Cerrar:
                 // la X abre la pregunta; el boton que queda en su lugar (CANCELAR) la cierra: un doble clic accidental cancela
-                if (ConfirmandoCierre) { ConfirmandoCierre = false; return AccionBarra.Ninguna; }
+                if (ConfirmandoCierre) { _cierre.Cancelar(); return AccionBarra.Ninguna; }
                 PopoverModoAbierto = false;
-                ConfirmandoCierre = true; _tConfirmacion = t;
+                _cierre.Pedir(t);
                 return AccionBarra.Ninguna;
         }
         return AccionBarra.Ninguna;
@@ -147,12 +169,10 @@ public sealed class BarraBotones
     /// <summary>Boton CERRAR de la pregunta. Solo actua si se esta confirmando.</summary>
     public AccionBarra ConfirmarCierre()
     {
-        if (!ConfirmandoCierre) return AccionBarra.Ninguna;
-        ConfirmandoCierre = false;
-        return AccionBarra.CerrarApp;
+        return _cierre.Confirmar() ? AccionBarra.CerrarApp : AccionBarra.Ninguna;
     }
 
-    public void CancelarCierre() => ConfirmandoCierre = false;
+    public void CancelarCierre() => _cierre.Cancelar();
     public void CerrarPopover() => PopoverModoAbierto = false;
 
     /// <summary>Lo llama la ventana al abrir o cerrar el menu por otros caminos (X del menu, autocierre, ocultar overlay).</summary>
@@ -161,13 +181,12 @@ public sealed class BarraBotones
     /// <summary>Autocancelacion de la confirmacion de cierre. Devuelve verdadero si cambio algo (hay que repintar).</summary>
     public bool Actualizar(double t)
     {
-        if (ConfirmandoCierre && t - _tConfirmacion >= CancelarCierreS) { ConfirmandoCierre = false; return true; }
-        return false;
+        return _cierre.Actualizar(t);
     }
 
     /// <summary>Fraccion que queda de la barra fina de la pregunta (1 al abrir, 0 a los 5 s); 0 si no se confirma.</summary>
     public double FraccionRestante(double t)
-        => ConfirmandoCierre ? Math.Clamp(1 - (t - _tConfirmacion) / CancelarCierreS, 0, 1) : 0;
+        => _cierre.FraccionRestante(t);
 
     /// <summary>Ancho de la ventana de botones: 140 normalmente, 292 durante la pregunta, 32 con el overlay oculto.</summary>
     public double AnchoVentana => Oculto ? MedidasUi.BotonClicable : ConfirmandoCierre ? MedidasUi.BarraAncha : MedidasUi.BarraAncho;

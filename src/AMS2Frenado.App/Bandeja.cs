@@ -11,6 +11,7 @@ namespace AMS2Frenado.App;
 /// <summary>
 /// Icono de la bandeja y su menu. Se usa <c>System.Windows.Forms.NotifyIcon</c> (UseWindowsForms) en lugar de
 /// P/Invoke a Shell_NotifyIcon: es la forma corta y conocida en WPF. Solo se usa para esto.
+/// Desde la fase 6 es el RESPALDO: las mismas opciones estan en el engranaje del overlay (VentanaMenu).
 /// Los comandos se publican como eventos; el estado marcado se refresca con <see cref="Actualizar"/>.
 /// Compila, SIN EJECUTAR: nunca se vio el menu en Windows.
 /// </summary>
@@ -31,7 +32,7 @@ internal sealed class Bandeja : IDisposable
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _opacidades = [];
     private readonly Dictionary<string, Forms.ToolStripMenuItem> _atajos = [];
 
-    public static readonly string[] AtajosSugeridos = ["Ctrl+Alt+L", "Ctrl+Alt+O", "Ctrl+Shift+F9", "Ctrl+Alt+F10"];
+    public static readonly string[] AtajosSugeridos = MenuConfig.AtajosSugeridos;
 
     public event Action? AlternarBloqueo, AlternarVisible, AlternarPitido, AlternarAviso, ProbarAviso, ProbarPitido;
     public event Action? AbrirCarpeta, AbrirCarpetaCapturas, ExportarDatos, ImportarDatos, AbrirDiagnostico, Salir;
@@ -91,7 +92,7 @@ internal sealed class Bandeja : IDisposable
         _menu.Items.Add(tam);
 
         var opa = new Forms.ToolStripMenuItem("Opacidad del fondo");
-        foreach (var a in new[] { 0.80, 0.88, 0.95 })
+        foreach (var a in new[] { 0.85, 0.88, 0.95 })     // el minimo subio de 0,80 a 0,85 en la fase 6
         {
             var it = Item($"{a * 100:0} %", () => OpacidadElegida?.Invoke(a));
             _opacidades[a] = it; opa.DropDownItems.Add(it);

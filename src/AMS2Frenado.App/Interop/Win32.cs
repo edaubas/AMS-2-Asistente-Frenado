@@ -40,6 +40,19 @@ internal static class Win32
         SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     }
 
+    /// <summary>
+    /// Ventanas de la barra de botones y del menu de configuracion (fase 6): NOACTIVATE | TOOLWINDOW y SIN TRANSPARENT, para
+    /// que reciban clics pero no le saquen el foco a AMS2 ni aparezcan en Alt-Tab. Compila, SIN EJECUTAR.
+    /// </summary>
+    public static void AplicarEstiloControl(IntPtr hwnd)
+    {
+        long ex = GetWindowLongPtr64(hwnd, GWL_EXSTYLE).ToInt64();
+        ex |= WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
+        ex &= ~WS_EX_TRANSPARENT;
+        SetWindowLongPtr64(hwnd, GWL_EXSTYLE, new IntPtr(ex));
+        SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+
     /// <summary>Vuelve a poner la ventana por encima de las demas sin activarla.</summary>
     public static void ReafirmarArriba(IntPtr hwnd)
         => SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);

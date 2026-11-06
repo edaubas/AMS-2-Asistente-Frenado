@@ -1,0 +1,335 @@
+<Window x:Class="AMS2Frenado.App.VentanaMenu" x:ClassModifier="internal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:AMS2Frenado.App"
+        Title="AMS2 Asistente de Frenado - Ajustes"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent" ResizeMode="NoResize"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False" Focusable="False"
+        SizeToContent="Height" Width="624" UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Ideal">
+    <Window.Resources>
+        <!-- Estilos del menu (UI-SPEC 7.2 y 7.5). Colores del Core (Paleta). -->
+        <SolidColorBrush x:Key="Sup" Color="#161A1F"/>
+        <SolidColorBrush x:Key="SupHover" Color="#222831"/>
+        <SolidColorBrush x:Key="SupPres" Color="#2F3842"/>
+        <SolidColorBrush x:Key="BordeBoton" Color="#5A6673"/>
+        <SolidColorBrush x:Key="Pista" Color="#66727F"/>
+        <SolidColorBrush x:Key="Rojo" Color="#C62F26"/>
+        <SolidColorBrush x:Key="Blanco" Color="#FFFFFF"/>
+
+        <Style x:Key="Boton" TargetType="Button">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Foreground" Value="#EEF1F4"/>
+            <Setter Property="FontFamily" Value="{StaticResource Inter}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Fondo" Background="{StaticResource Sup}" BorderBrush="{StaticResource BordeBoton}" BorderThickness="1" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Fondo" Property="Background" Value="{StaticResource SupHover}"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Fondo" Property="Background" Value="{StaticResource SupPres}"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="BotonRojo" TargetType="Button" BasedOn="{StaticResource Boton}">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Fondo" Background="#C62F26" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Fondo" Property="Background" Value="#D8382E"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Fondo" Property="Background" Value="#A82720"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- fila de texto de pagina interna / pie: alineada a la izquierda -->
+        <Style x:Key="Fila" TargetType="Button" BasedOn="{StaticResource Boton}">
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Fondo" Background="{StaticResource Sup}" BorderBrush="#2E3640" BorderThickness="1" Padding="12,0">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Fondo" Property="Background" Value="{StaticResource SupHover}"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Fondo" Property="Background" Value="{StaticResource SupPres}"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- segmentado: la opcion elegida va en blanco con texto oscuro (la forma lleva el estado, no solo el color) -->
+        <Style x:Key="Segmento" TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Foreground" Value="#DDE2E7"/>
+            <Setter Property="FontFamily" Value="{StaticResource Inter}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Fondo" Background="{StaticResource Sup}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Fondo" Property="Background" Value="{StaticResource SupHover}"/></Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Fondo" Property="Background" Value="#FFFFFF"/>
+                                <Setter Property="Foreground" Value="#0C0E11"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- interruptor 44 x 24, perilla de 18 con tilde: la forma lleva el estado -->
+        <Style x:Key="Interruptor" TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid Background="Transparent">
+                            <Border x:Name="Pista" Background="{StaticResource Sup}" BorderBrush="#7C8794" BorderThickness="1" CornerRadius="12"/>
+                            <Border x:Name="Perilla" Width="18" Height="18" Background="#FFFFFF" CornerRadius="9" HorizontalAlignment="Left" Margin="3,0,0,0">
+                                <Border.RenderTransform><TranslateTransform x:Name="Desplaza" X="0"/></Border.RenderTransform>
+                                <Path x:Name="Tilde" Data="M4.5,9.5 L7.8,12.8 L13.5,5.5" Stroke="#C62F26" StrokeThickness="2" Visibility="Collapsed"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="None"/>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Pista" Property="Background" Value="#C62F26"/>
+                                <Setter TargetName="Pista" Property="BorderBrush" Value="#C62F26"/>
+                                <Setter TargetName="Tilde" Property="Visibility" Value="Visible"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Desplaza" Storyboard.TargetProperty="X" To="20" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="Desplaza" Storyboard.TargetProperty="X" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- deslizador: pista de 4, perilla de 8 x 20, zona de arrastre de 28 de alto, sin animacion -->
+        <Style x:Key="Deslizador" TargetType="Slider">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="IsSnapToTickEnabled" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Background="Transparent" Height="28">
+                            <Border Height="4" Background="{StaticResource Pista}" VerticalAlignment="Center"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" Height="28"><Border Height="4" Background="#DDE2E7" VerticalAlignment="Center"/></Border></ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="8" Height="20" Focusable="False">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb"><Border Background="#FFFFFF" BorderBrush="#0C0E11" BorderThickness="1"/></ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton"><Border Background="Transparent" Height="28"/></ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Etiqueta" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource Inter}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FF8A80"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+        <Style x:Key="Texto14" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource Inter}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#EEF1F4"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="Ayuda" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource Inter}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#A9B2BC"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+        </Style>
+    </Window.Resources>
+
+    <local:PanelCarbono x:Name="Fondo" ColorBase="#0F1216" Alfa="1" Corte="16" ConTextura="False" Borde="#2E3640" Relleno="16">
+        <Grid x:Name="Contenido">
+            <Grid.RenderTransform><TranslateTransform x:Name="Sube" Y="0"/></Grid.RenderTransform>
+
+            <!-- ============ pagina principal ============ -->
+            <Grid x:Name="PagPrincipal">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <StackPanel HorizontalAlignment="Left">
+                        <TextBlock x:Name="TxtTituloMenu" FontFamily="{StaticResource Barlow}" FontSize="22" FontWeight="Bold" Foreground="#FFFFFF"/>
+                        <Rectangle Width="28" Height="3" Fill="#C62F26" HorizontalAlignment="Left" Margin="0,3,0,0"/>
+                    </StackPanel>
+                    <Button x:Name="BtnCerrarMenu" Style="{StaticResource Boton}" Width="36" Padding="0" HorizontalAlignment="Right" ToolTip="Cerrar ajustes">
+                        <Path Data="M3.5,3.5 L12.5,12.5 M12.5,3.5 L3.5,12.5" Stroke="#DDE2E7" StrokeThickness="1.6" Stretch="None" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="16" Height="16"/>
+                    </Button>
+                </Grid>
+
+                <ScrollViewer x:Name="Desplazamiento" Grid.Row="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                    <Grid x:Name="Columnas">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="ColIzq" Width="288"/>
+                            <ColumnDefinition x:Name="ColSep" Width="16"/>
+                            <ColumnDefinition x:Name="ColDer" Width="288"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+
+                        <!-- columna izquierda: modo, referencia, overlay -->
+                        <StackPanel x:Name="ColumnaIzquierda" Grid.Column="0" Grid.Row="0">
+                            <TextBlock Text="MODO" Style="{StaticResource Etiqueta}"/>
+                            <UniformGrid Rows="1" x:Name="SegModo"/>
+                            <TextBlock x:Name="TxtAyudaModo" Style="{StaticResource Ayuda}"/>
+
+                            <TextBlock Text="REFERENCIA PRINCIPAL" Style="{StaticResource Etiqueta}" Margin="0,16,0,6"/>
+                            <UniformGrid Rows="1" x:Name="SegReferencia"/>
+
+                            <TextBlock Text="OVERLAY" Style="{StaticResource Etiqueta}" Margin="0,16,0,6"/>
+                            <Grid Height="32">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Fijar" Style="{StaticResource Texto14}"/>
+                                    <Border Background="#2A3139" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="TxtTeclaFijar" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="SemiBold" Foreground="#EEF1F4"/>
+                                    </Border>
+                                </StackPanel>
+                                <ToggleButton x:Name="SwFijar" Style="{StaticResource Interruptor}" HorizontalAlignment="Right" ToolTip="Fijar: no se puede mover ni cambiar de tamaño"/>
+                            </Grid>
+                            <StackPanel x:Name="PilaOverlay"/>
+                            <Button x:Name="BtnOcultar" Style="{StaticResource Boton}" Margin="0,10,0,0" Content="OCULTAR OVERLAY"/>
+                        </StackPanel>
+
+                        <!-- columna derecha: aviso, pitido, atajo -->
+                        <StackPanel x:Name="ColumnaDerecha" Grid.Column="2" Grid.Row="0">
+                            <TextBlock Text="AVISO DE FRENADA" Style="{StaticResource Etiqueta}"/>
+                            <Grid Height="36">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Símbolo" Style="{StaticResource Texto14}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Button x:Name="BtnProbarAviso" Style="{StaticResource Boton}" Height="28" Content="PROBAR" Margin="0,0,10,0"/>
+                                    <ToggleButton x:Name="SwAviso" Style="{StaticResource Interruptor}" ToolTip="Activar el aviso de frenada"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel x:Name="PilaAviso"/>
+
+                            <TextBlock Text="PITIDO" Style="{StaticResource Etiqueta}" Margin="0,16,0,6"/>
+                            <Grid Height="36">
+                                <TextBlock Text="Pitido al frenar" Style="{StaticResource Texto14}"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Button x:Name="BtnProbarPitido" Style="{StaticResource Boton}" Height="28" Content="PROBAR" Margin="0,0,10,0"/>
+                                    <ToggleButton x:Name="SwPitido" Style="{StaticResource Interruptor}" ToolTip="Activar el pitido"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="ATAJO" Style="{StaticResource Etiqueta}" Margin="0,16,0,6"/>
+                            <Button x:Name="BtnAtajo" Style="{StaticResource Fila}" Height="36">
+                                <Grid Width="262">
+                                    <TextBlock Text="Atajo de bloqueo" Style="{StaticResource Texto14}"/>
+                                    <TextBlock x:Name="TxtAtajoActual" HorizontalAlignment="Right" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="Bold" Foreground="#EEF1F4" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                                    <TextBlock Text="›" HorizontalAlignment="Right" Style="{StaticResource Texto14}"/>
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+
+                <!-- pie: datos, diagnostico y salir (con doble paso) -->
+                <Grid x:Name="Pie" Grid.Row="2" Margin="0,16,0,0">
+                    <StackPanel x:Name="PieNormal" Orientation="Horizontal">
+                        <Button x:Name="BtnDatos" Style="{StaticResource Boton}" Content="DATOS  ›" Margin="0,0,8,0"/>
+                        <Button x:Name="BtnDiagnostico" Style="{StaticResource Boton}" Content="DIAGNÓSTICO…"/>
+                    </StackPanel>
+                    <Button x:Name="BtnSalir" Style="{StaticResource Boton}" Content="SALIR" HorizontalAlignment="Right" Width="96"/>
+                    <Grid x:Name="PieSalir" Visibility="Collapsed" Height="36">
+                        <TextBlock x:Name="TxtPreguntaSalir" VerticalAlignment="Center" FontFamily="{StaticResource Barlow}" FontSize="18" FontWeight="SemiBold" Foreground="#FFFFFF"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="BtnSalirSi" Style="{StaticResource BotonRojo}" Content="SALIR" Width="96" Margin="0,0,8,0"/>
+                            <Button x:Name="BtnSalirNo" Style="{StaticResource Boton}" Content="CANCELAR" Width="96"/>
+                        </StackPanel>
+                        <Rectangle x:Name="ProgresoSalir" Height="2" Fill="#C62F26" VerticalAlignment="Bottom" HorizontalAlignment="Left"/>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <!-- ============ pagina Datos ============ -->
+            <StackPanel x:Name="PagDatos" Visibility="Collapsed">
+                <Grid Margin="0,0,0,14">
+                    <Button x:Name="BtnVolverDatos" Style="{StaticResource Boton}" Width="36" Padding="0" HorizontalAlignment="Left" ToolTip="Volver">
+                        <Path Data="M10,2.5 L4.5,8 L10,13.5" Stroke="#DDE2E7" StrokeThickness="1.6" Stretch="None" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="16" Height="16"/>
+                    </Button>
+                    <StackPanel Margin="48,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="TxtTituloDatos" FontFamily="{StaticResource Barlow}" FontSize="22" FontWeight="Bold" Foreground="#FFFFFF"/>
+                        <Rectangle Width="28" Height="3" Fill="#C62F26" HorizontalAlignment="Left" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Grid>
+                <Button x:Name="BtnAbrirDatos" Style="{StaticResource Fila}" Content="Abrir carpeta de datos" Margin="0,0,0,6"/>
+                <Button x:Name="BtnAbrirCapturas" Style="{StaticResource Fila}" Content="Abrir carpeta de capturas" Margin="0,0,0,6"/>
+                <Button x:Name="BtnExportar" Style="{StaticResource Fila}" Content="Exportar datos…" Margin="0,0,0,6"/>
+                <Button x:Name="BtnImportar" Style="{StaticResource Fila}" Content="Importar datos…"/>
+            </StackPanel>
+
+            <!-- ============ pagina Atajo de bloqueo ============ -->
+            <StackPanel x:Name="PagAtajo" Visibility="Collapsed">
+                <Grid Margin="0,0,0,14">
+                    <Button x:Name="BtnVolverAtajo" Style="{StaticResource Boton}" Width="36" Padding="0" HorizontalAlignment="Left" ToolTip="Volver">
+                        <Path Data="M10,2.5 L4.5,8 L10,13.5" Stroke="#DDE2E7" StrokeThickness="1.6" Stretch="None" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="16" Height="16"/>
+                    </Button>
+                    <StackPanel Margin="48,0,0,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="TxtTituloAtajo" FontFamily="{StaticResource Barlow}" FontSize="22" FontWeight="Bold" Foreground="#FFFFFF"/>
+                        <Rectangle Width="28" Height="3" Fill="#C62F26" HorizontalAlignment="Left" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Grid>
+                <StackPanel x:Name="ListaAtajos"/>
+                <TextBlock x:Name="TxtAtajoOtro" Style="{StaticResource Ayuda}" Margin="0,10,0,0"/>
+            </StackPanel>
+        </Grid>
+    </local:PanelCarbono>
+</Window>
