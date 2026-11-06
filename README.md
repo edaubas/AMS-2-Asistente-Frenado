@@ -43,7 +43,7 @@ Dos partes, separadas a propósito:
 - **Mapa:** el eje vertical es `-z` (z crece hacia adelante); si el trazo saliera espejado en el juego, es un cambio de signo en `ProyeccionMapa`.
 - **Carteles por pista** siguen en el `mapa.json` de cada pista (campo `carteles`), no en `config.json`.
 
-El número de vuelta y el aviso "Otras clases" de la spec: el panel de grabación muestra la clase en lugar de "vuelta N" (no se sabe si `mCurrentLap` empieza en 0 o en 1); lo demás sigue la spec.
+Diferencia con la spec: el panel de grabación muestra la clase en lugar de "vuelta N" (no se sabe si `mCurrentLap` empieza en 0 o en 1); lo demás sigue la spec.
 
 ## Requisito en el juego
 
