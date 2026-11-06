@@ -63,3 +63,24 @@ Cuando terminen los ajustes de `fase-5c-ajustes` y se corrijan sus errores, se a
 - Correcciones 1 sin ejecutar en Windows: ventana de ajustes movible, ícono (exe, diagnóstico, bandeja) y chip de modo sin juego (`docs/FASE-6-PRUEBA.md`, sección "Correcciones 1").
 - Tooltips y teclado (Esc) en ventanas sin activación: pueden no funcionar (P24, P31).
 - Release por tag.
+
+## Para revisar antes del próximo build (anotado el 6 de noviembre de 2026)
+
+Solo anotado: el usuario va a hacer pruebas y avisa antes de implementar.
+
+### Bug: el overlay desaparece al abrir la app y vuelve a aparecer solo
+
+- **Síntoma:** al abrir `AMS2Frenado.exe`, el overlay desaparece, pero el proceso sigue corriendo (se ve en el Administrador de tareas, con 0 % de CPU y ~0,2 MB de memoria) y al rato el overlay vuelve a aparecer.
+- **Estado:** sin investigar. No se sabe todavía si pasa con AMS2 cerrado, abierto o en pausa, ni cuánto tarda en volver.
+- **Hipótesis a verificar** (ninguna comprobada, no se puede ejecutar WPF desde el entorno de desarrollo):
+  - La ventana pierde el orden "siempre arriba" frente a AMS2 en Borderless y vuelve cuando el juego cede el foco.
+  - El overlay arranca oculto o colapsado hasta la primera lectura válida o hasta el primer tick de reposicionamiento (la ventana grande conserva el contenido colapsado cuando se oculta, y la barra de botones se reposiciona en cada tick).
+  - Una posición guardada en `config.json` que queda fuera de pantalla hasta que se corrige.
+  - Un `mutex` de instancia única que deja una instancia vieja sin ventana visible.
+- **Qué pedir al usuario para acotarlo:** si ocurre con AMS2 cerrado, cuánto tarda en volver, si lo vuelve a mostrar al tocar el ícono de la bandeja, y el contenido de `config.json`.
+
+### Cambio de menú: orden y nombre de la anticipación
+
+- En el menú de Ajustes, dentro de "Aviso de frenada", el control de anticipación va **debajo del título "Aviso de frenada" y arriba de "Símbolo"**.
+- La etiqueta pasa a ser solamente **"Anticipación de aviso"**, sin la aclaración entre paréntesis. La ayuda de abajo ("Segundos antes del punto de frenado en que suena el pitido y el símbolo llega al 100 %. 0 = justo en el punto.") se mantiene.
+- Mismo cambio de nombre en el submenú de la bandeja.
