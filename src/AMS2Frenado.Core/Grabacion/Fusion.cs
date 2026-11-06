@@ -19,21 +19,36 @@ public static partial class Fusion
     public static List<CurvaGuardada> Fusionar(IReadOnlyList<CurvaEmparejada> nuevas, IReadOnlyList<CurvaGuardada> previas, double largo)
     {
         var usadas = new HashSet<int>();
-        var res = new List<CurvaGuardada>();
-        foreach (var n in nuevas.OrderBy(c => c.Vertice))
-        {
-            var c = new CurvaGuardada { Vertice = n.Vertice, Tipo = Tipos.ATexto(n.Tipo), Ia = n.Ia, Vos = n.Vos };
-            int mejor = -1; double dMejor = RadioM + 1;
+        var ordenadas = nuevas.OrderBy(c => c.Vertice).ToList();
+
+        // Emparejado global por cercania (el par mas cercano primero), no en el orden de las nuevas:
+        // si no, una curva solo tuya (sin IA) que cae a menos de RadioM de una curva ya guardada se
+        // la quedaba antes que la curva real de la IA y heredaba su bloque "ia" viejo (curva duplicada).
+        var pares = new List<(double dist, int n, int p)>();
+        for (int i = 0; i < ordenadas.Count; i++)
             for (int j = 0; j < previas.Count; j++)
             {
-                if (usadas.Contains(j)) continue;
-                double d = Math.Abs(Geometria.DifCirc(n.Vertice, previas[j].Vertice, largo));
-                if (d <= RadioM && d < dMejor) { mejor = j; dMejor = d; }
+                double d = Math.Abs(Geometria.DifCirc(ordenadas[i].Vertice, previas[j].Vertice, largo));
+                if (d <= RadioM) pares.Add((d, i, j));
             }
-            if (mejor >= 0)
+        pares.Sort((a, b) => a.dist.CompareTo(b.dist));
+        var previaDe = new int[ordenadas.Count];
+        Array.Fill(previaDe, -1);
+        foreach (var (_, i, j) in pares)
+        {
+            if (previaDe[i] >= 0 || usadas.Contains(j)) continue;
+            previaDe[i] = j;
+            usadas.Add(j);
+        }
+
+        var res = new List<CurvaGuardada>();
+        for (int i = 0; i < ordenadas.Count; i++)
+        {
+            var n = ordenadas[i];
+            var c = new CurvaGuardada { Vertice = n.Vertice, Tipo = Tipos.ATexto(n.Tipo), Ia = n.Ia, Vos = n.Vos };
+            if (previaDe[i] >= 0)
             {
-                usadas.Add(mejor);
-                var p = previas[mejor];
+                var p = previas[previaDe[i]];
                 c.Nombre = p.Nombre;
                 c.Nota = p.Nota;
                 c.Extra = p.Extra;
