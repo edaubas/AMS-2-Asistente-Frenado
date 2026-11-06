@@ -1,0 +1,30 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Pruebas
+        run: dotnet test AMS2Frenado.sln -c Release
+
+      - name: Publicar .exe (win-x64, un solo archivo)
+        run: >
+          dotnet publish src/AMS2Frenado.App/AMS2Frenado.App.csproj -c Release
+          -r win-x64 --self-contained -p:PublishSingleFile=true -o publish
+
+      - name: Subir el .exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: AMS2Frenado-win-x64
+          path: publish/AMS2Frenado.exe
+          if-no-files-found: error
