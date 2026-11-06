@@ -111,7 +111,8 @@ internal sealed class ControladorApp : IDisposable
                 if (t - _ultimaReafirmacion > 2) { _ultimaReafirmacion = t; _ventana.ReafirmarArriba(); _aviso.ReafirmarArriba(); }
             }
             // el aviso se actualiza en cada tick (60 Hz) aunque la telemetria llegue a ~27 Hz, para que el fundido de 80 ms sea fluido
-            _aviso.Pintar(_servicio.ActualizarAviso(t).Opacidad);
+            var cuadroAviso = _servicio.ActualizarAviso(t);
+            _aviso.Pintar(cuadroAviso.Opacidad, cuadroAviso.Escala);
         }
         catch (Exception e)
         {
@@ -130,6 +131,7 @@ internal sealed class ControladorApp : IDisposable
         // "Ocultar overlay" tambien apaga el aviso de frenada
         _servicio.AvisoActivo = _cfg.AvisoActivo && _cfg.Visible;
         _servicio.AvisoDuracionS = _cfg.AvisoDuracionS;
+        _servicio.AvisoRampaS = _cfg.AvisoRampaS;
     }
 
     private void Guardar()
@@ -164,6 +166,7 @@ internal sealed class ControladorApp : IDisposable
         _bandeja.ProbarPitido += _pitido.Reproducir;
         _bandeja.EscalaAvisoElegida += s => { Alternar(() => _cfg.AvisoEscala = s); _aviso.AplicarEscala(_cfg.AvisoEscala); };
         _bandeja.DuracionAvisoElegida += d => Alternar(() => _cfg.AvisoDuracionS = d);
+        _bandeja.RampaAvisoElegida += d => Alternar(() => _cfg.AvisoRampaS = d);
         _bandeja.ModoElegido += m => Alternar(() => _cfg.Modo = m);
         _bandeja.ReferenciaElegida += r => Alternar(() => _cfg.ReferenciaPrincipal = r);
         _bandeja.OpacidadElegida += a => Alternar(() => _cfg.Opacidad = a);
@@ -329,9 +332,9 @@ internal sealed class ControladorApp : IDisposable
 
     private void ImportarDatos()
     {
-        if (_cfg.Modo == ModoApp.Grabar)
+        if (_cfg.Modo != ModoApp.Mostrar)
         {
-            _bandeja.Globo("Importar datos", "Pasá primero a Modo › Mostrar: en modo Grabar el programa podría pisar lo importado.", error: true);
+            _bandeja.Globo("Importar datos", "Pasá primero a Modo › Mostrar: mientras se graba (todo o solo vos) el programa podría pisar lo importado.", error: true);
             return;
         }
         try

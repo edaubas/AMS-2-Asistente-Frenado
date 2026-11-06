@@ -193,7 +193,11 @@ public partial class VentanaOverlay : Window
         PanelContadores.Visibility = p.Tipo == TipoTarjeta.Grabando ? Visibility.Visible : Visibility.Collapsed;
         if (p.Contadores is { } k)
         {
-            TxtEncabContadores.Text = k.Encabezado + " · grabando";
+            TxtEncabContadores.Text = k.Encabezado + (k.SoloVos ? " · grabando solo vos" : " · grabando");
+            // solo vos: la columna de la IA se oculta y la tuya ocupa todo el ancho
+            ColContIa.Visibility = k.SoloVos ? Visibility.Collapsed : Visibility.Visible;
+            Grid.SetColumn(ColContVos, k.SoloVos ? 0 : 1);
+            Grid.SetColumnSpan(ColContVos, k.SoloVos ? 2 : 1);
             ReponerEtiquetas(EtiquetaContIa, [EtiquetaRef.Ia]);
             ReponerEtiquetas(EtiquetaContVos, [EtiquetaRef.Vos]);
             TxtContIa.Text = k.Ia; TxtContIaDet.Text = k.IaDetalle;
@@ -278,7 +282,7 @@ public partial class VentanaOverlay : Window
         bool grab = v.Grabando;
         ChipModo.Background = Pincel.De(grab ? Paleta.ChipGrabandoFondo : Paleta.ChipMostrarFondo);
         TxtChipModo.Foreground = Pincel.De(grab ? Paleta.ChipGrabandoTexto : Paleta.ChipMostrarTexto);
-        TxtChipModo.Text = grab ? "GRABANDO" : "MOSTRAR";
+        TxtChipModo.Text = grab ? (v.SoloVos ? "GRABANDO · SOLO VOS" : "GRABANDO") : "MOSTRAR";
         PuntoChipModo.Visibility = grab ? Visibility.Visible : Visibility.Collapsed;
         TxtAviso.Visibility = v.Aviso is null ? Visibility.Collapsed : Visibility.Visible;
         TxtAviso.Text = v.Aviso ?? "";

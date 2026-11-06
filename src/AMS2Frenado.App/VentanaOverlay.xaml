@@ -87,12 +87,12 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
+                                <StackPanel x:Name="ColContIa" Grid.Column="0">
                                     <StackPanel x:Name="EtiquetaContIa" Orientation="Horizontal"/>
                                     <TextBlock x:Name="TxtContIa" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="26" Foreground="#EEF1F4"/>
                                     <TextBlock x:Name="TxtContIaDet" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1">
+                                <StackPanel x:Name="ColContVos" Grid.Column="1">
                                     <StackPanel x:Name="EtiquetaContVos" Orientation="Horizontal"/>
                                     <TextBlock x:Name="TxtContVos" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="26" Foreground="#EEF1F4"/>
                                     <TextBlock x:Name="TxtContVosDet" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>

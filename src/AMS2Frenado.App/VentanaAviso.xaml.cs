@@ -100,10 +100,13 @@ public partial class VentanaAviso : Window
     public double Escala => _escala;
 
     /// <summary>Opacidad del simbolo (0..1) que da el Core. Desbloqueada se ve siempre, al menos a media opacidad, para poder ubicarla.</summary>
-    public void Pintar(double opacidad)
+    public void Pintar(double opacidad, double escala = 1)
     {
         _opacidad = opacidad;
         Simbolo.Opacity = _bloqueada ? opacidad : Math.Max(opacidad, 0.55);
+        // el simbolo crece un poco mientras aparece (0,85 a 1); desbloqueada se ve siempre a tamaño completo
+        double e = _bloqueada ? escala : 1;
+        EscalaSimbolo.ScaleX = e; EscalaSimbolo.ScaleY = e;
     }
 
     public void ReafirmarArriba()

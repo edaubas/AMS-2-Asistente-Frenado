@@ -25,6 +25,7 @@ internal sealed class Bandeja : IDisposable
     private readonly Dictionary<ReferenciaGuia, Forms.ToolStripMenuItem> _refs = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _escalasAviso = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _duracionesAviso = [];
+    private readonly Dictionary<double, Forms.ToolStripMenuItem> _rampasAviso = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _escalas = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _opacidades = [];
     private readonly Dictionary<string, Forms.ToolStripMenuItem> _atajos = [];
@@ -35,7 +36,7 @@ internal sealed class Bandeja : IDisposable
     public event Action? AbrirCarpeta, AbrirCarpetaCapturas, ExportarDatos, ImportarDatos, AbrirDiagnostico, Salir;
     public event Action<ModoApp>? ModoElegido;
     public event Action<ReferenciaGuia>? ReferenciaElegida;
-    public event Action<double>? EscalaElegida, EscalaAvisoElegida, DuracionAvisoElegida;
+    public event Action<double>? EscalaElegida, EscalaAvisoElegida, DuracionAvisoElegida, RampaAvisoElegida;
     public event Action<double>? OpacidadElegida;
     public event Action<string>? AtajoElegido;
 
@@ -59,9 +60,15 @@ internal sealed class Bandeja : IDisposable
         _menu.Items.Add(_bloquear);
 
         var modo = new Forms.ToolStripMenuItem("Modo");
-        foreach (var m in new[] { ModoApp.Mostrar, ModoApp.Grabar })
+        foreach (var m in new[] { ModoApp.Grabar, ModoApp.GrabarSoloVos, ModoApp.Mostrar })
         {
-            var it = Item(m == ModoApp.Mostrar ? "Mostrar (usar lo guardado)" : "Grabar (aprender la pista)", () => ModoElegido?.Invoke(m));
+            string texto = m switch
+            {
+                ModoApp.Grabar => "Grabar todo (IA + vos)",
+                ModoApp.GrabarSoloVos => "Grabar solo vos",
+                _ => "Mostrar",
+            };
+            var it = Item(texto, () => ModoElegido?.Invoke(m));
             _modos[m] = it; modo.DropDownItems.Add(it);
         }
         _menu.Items.Add(modo);
@@ -103,7 +110,14 @@ internal sealed class Bandeja : IDisposable
             _escalasAviso[s] = it; tamAviso.DropDownItems.Add(it);
         }
         _menu.Items.Add(tamAviso);
-        var durAviso = new Forms.ToolStripMenuItem("Duración máxima del aviso");
+        var rampaAviso = new Forms.ToolStripMenuItem("Anticipación del aviso");
+        foreach (var d in new[] { 1.0, 1.5, 2.0, 2.5, 3.0 })
+        {
+            var it = Item($"{d:0.0} s antes", () => RampaAvisoElegida?.Invoke(d));
+            _rampasAviso[d] = it; rampaAviso.DropDownItems.Add(it);
+        }
+        _menu.Items.Add(rampaAviso);
+        var durAviso = new Forms.ToolStripMenuItem("Duración del aviso después del punto");
         foreach (var d in new[] { 1.0, 1.5, 2.0 })
         {
             var it = Item($"{d:0.0} s", () => DuracionAvisoElegida?.Invoke(d));
@@ -151,13 +165,14 @@ internal sealed class Bandeja : IDisposable
         foreach (var (r, it) in _refs) it.Checked = cfg.ReferenciaPrincipal == r;
         foreach (var (e, it) in _escalasAviso) it.Checked = Math.Abs(cfg.AvisoEscala - e) < 0.01;
         foreach (var (d, it) in _duracionesAviso) it.Checked = Math.Abs(cfg.AvisoDuracionS - d) < 0.01;
+        foreach (var (d, it) in _rampasAviso) it.Checked = Math.Abs(cfg.AvisoRampaS - d) < 0.01;
         foreach (var (s, it) in _escalas) it.Checked = Math.Abs(cfg.Escala - s) < 0.01;
         foreach (var (a, it) in _opacidades) it.Checked = Math.Abs(cfg.Opacidad - a) < 0.005;
         foreach (var (t, it) in _atajos) it.Checked = string.Equals(cfg.Atajo, t, StringComparison.OrdinalIgnoreCase);
         _aviso.Checked = cfg.AvisoActivo;
         _pitido.Checked = cfg.Pitido;
         PonerIcono(cfg.Bloqueado);
-        _icono.Text = $"AMS2 Asistente de Frenado · {(cfg.Modo == ModoApp.Grabar ? "grabando" : "mostrando")}";
+        _icono.Text = $"AMS2 Asistente de Frenado · {(cfg.Modo switch { ModoApp.Grabar => "grabando", ModoApp.GrabarSoloVos => "grabando solo vos", _ => "mostrando" })}";
     }
 
     public void Globo(string titulo, string texto, bool error = false, int ms = 8000)

@@ -10,7 +10,11 @@
         <!-- solo desbloqueada: fondo para poder agarrarla y verla -->
         <Border x:Name="FondoEdicion" Visibility="Collapsed" Background="#B30C0E11" CornerRadius="12"/>
         <Viewbox Stretch="Uniform">
-            <Canvas x:Name="Simbolo" Width="120" Height="120" Opacity="0" IsHitTestVisible="False"/>
+            <Canvas x:Name="Simbolo" Width="120" Height="120" Opacity="0" IsHitTestVisible="False" RenderTransformOrigin="0.5,0.5">
+                <Canvas.RenderTransform>
+                    <ScaleTransform x:Name="EscalaSimbolo" ScaleX="0.85" ScaleY="0.85"/>
+                </Canvas.RenderTransform>
+            </Canvas>
         </Viewbox>
         <Rectangle x:Name="Contorno" Visibility="Collapsed" IsHitTestVisible="False" RadiusX="12" RadiusY="12"
                    Stroke="#5AA9FF" StrokeThickness="2" StrokeDashArray="3 3" Margin="1"/>
