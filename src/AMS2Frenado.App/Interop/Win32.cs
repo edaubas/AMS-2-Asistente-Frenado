@@ -26,6 +26,21 @@ internal static class Win32
     [DllImport("user32.dll", SetLastError = true)] public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
     [DllImport("user32.dll", SetLastError = true)] public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr hIcon);
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out PuntoPx lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)] private struct PuntoPx { public int X, Y; }
+
+    /// <summary>Posicion del cursor en pixeles fisicos de la pantalla virtual (no depende de ninguna ventana). Compila, SIN EJECUTAR.</summary>
+    public static bool CursorEnPantalla(out int x, out int y)
+    {
+        bool ok = GetCursorPos(out var p);
+        x = p.X; y = p.Y;
+        return ok;
+    }
+
+    /// <summary>Mueve la ventana (pixeles fisicos) sin cambiar tamano ni orden y SIN activarla. Compila, SIN EJECUTAR.</summary>
+    public static void MoverSinActivar(IntPtr hwnd, int x, int y)
+        => SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
     /// <summary>
     /// Bloqueada: LAYERED | TRANSPARENT | NOACTIVATE | TOOLWINDOW (los clics atraviesan hasta el juego).

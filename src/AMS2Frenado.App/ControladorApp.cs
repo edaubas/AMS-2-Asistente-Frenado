@@ -34,6 +34,7 @@ internal sealed class ControladorApp : IDisposable
     private VentanaBarra _barra = null!;
     private VentanaMenu _menu = null!;
     private Rect? _ultimaReserva;
+    private readonly PosicionAjustes _posAjustes = new();      // posicion elegida de la ventana de ajustes (sesion + config.json)
     private readonly Pitido _pitido = new();
     private readonly Bandeja _bandeja = new();
     private readonly AtajoGlobal _atajo = new();
@@ -77,7 +78,15 @@ internal sealed class ControladorApp : IDisposable
         _barra.ModoElegido += AlElegirModoPopover;
         _barra.CierreConfirmado += () => { if (_modeloBarra.ConfirmarCierre() == AccionBarra.CerrarApp) Salir(); };
         _barra.CierreCancelado += () => { _modeloBarra.CancelarCierre(); SincronizarBarra(); };
-        _menu = new VentanaMenu { Reloj = () => _reloj.Elapsed.TotalSeconds };
+        _menu = new VentanaMenu { Reloj = () => _reloj.Elapsed.TotalSeconds, AreaEn = AreaEnPunto };
+        if (_cfg.AjustesPosicion is { } ap) _posAjustes.Elegir(ap.X, ap.Y);
+        _menu.PosicionElegida += (x, y) =>
+        {
+            _posAjustes.Elegir(x, y);
+            _cfg.AjustesPosicion = new PosicionVentana { X = x, Y = y };
+            Guardar();
+        };
+        _menu.SizeChanged += (_, _) => ReajustarMenu();
         ConectarMenu();
         SincronizarBarra();
         _barra.Show();
@@ -283,7 +292,7 @@ internal sealed class ControladorApp : IDisposable
         if (_modeloMenu.Abierto)
         {
             _menu.ActualizarSalir(t);
-            if (_modeloMenu.Actualizar(t, _menu.MouseAdentro)) CerrarMenu(yaCerrado: true);
+            if (_modeloMenu.Actualizar(t, _menu.MouseAdentro || _menu.Arrastrando)) CerrarMenu(yaCerrado: true);
         }
         if (_modeloMenu.DebeGuardar(t)) Guardar();
     }
@@ -321,15 +330,26 @@ internal sealed class ControladorApp : IDisposable
         var rb = new AreaPantalla(_barra.Left, _barra.Top, _barra.Width, _barra.Height);
         bool una = Esquinas.MenuEnUnaColumna(area);
         double ancho = una ? 352 : MedidasUi.MenuAncho;
-        var (x, y) = Esquinas.PosicionMenu(rb, area, ancho, alto);
+        var (x, y) = _posAjustes.Resolver(rb, area, AreaEnPunto, ancho, alto);
         _menu.AbrirEn(x, y, una, area.Alto);
-        // una sola vez, con el alto real ya medido: se corrige si se salia de la pantalla (despues no se mueve)
+        // una sola vez, con el alto real ya medido: se corrige si se salia de la pantalla. Si el usuario ya movio la ventana
+        // (o la movio una vez abierta), manda su posicion: el calculo automatico junto a la barra no la pisa.
         _menu.Dispatcher.BeginInvoke(() =>
         {
-            if (!_menu.IsVisible) return;
-            var (x2, y2) = Esquinas.PosicionMenu(rb, area, _menu.ActualWidth, _menu.ActualHeight);
+            if (!_menu.IsVisible || _menu.Arrastrando) return;
+            var (x2, y2) = _posAjustes.Resolver(rb, area, AreaEnPunto, _menu.ActualWidth, _menu.ActualHeight);
             _menu.Left = x2; _menu.Top = y2;
         }, DispatcherPriority.Loaded);
+    }
+
+    /// <summary>Si al cambiar de pagina el menu crece y se sale de la pantalla, se lo sube; si no, no se lo toca (ni se recalcula junto a la barra).</summary>
+    private void ReajustarMenu()
+    {
+        if (!_menu.IsVisible || _menu.Arrastrando || _menu.ActualWidth <= 0) return;
+        var area = AreaEnPunto(_menu.Left + _menu.ActualWidth / 2, _menu.Top + _menu.ActualHeight / 2);
+        var (x, y) = Esquinas.AjustarDentro((_menu.Left, _menu.Top), area, _menu.ActualWidth, _menu.ActualHeight);
+        if (Math.Abs(x - _menu.Left) > 0.5) _menu.Left = x;
+        if (Math.Abs(y - _menu.Top) > 0.5) _menu.Top = y;
     }
 
     private void CerrarMenu(bool yaCerrado = false)
@@ -402,6 +422,15 @@ internal sealed class ControladorApp : IDisposable
         }
         var wa = scr.WorkingArea;
         return (scr.DeviceName, new AreaPantalla(wa.X / sx, wa.Y / sy, wa.Width / sx, wa.Height / sy));
+    }
+
+    /// <summary>Area de trabajo (DIP) del monitor que contiene el punto dado (DIP de pantalla).</summary>
+    private AreaPantalla AreaEnPunto(double x, double y)
+    {
+        double sx = 1, sy = 1;
+        try { var d = VisualTreeHelper.GetDpi(_barra); sx = d.DpiScaleX; sy = d.DpiScaleY; } catch { }
+        var wa = Forms.Screen.FromPoint(new System.Drawing.Point((int)(x * sx), (int)(y * sy))).WorkingArea;
+        return new AreaPantalla(wa.X / sx, wa.Y / sy, wa.Width / sx, wa.Height / sy);
     }
 
     private void PosicionInicial()

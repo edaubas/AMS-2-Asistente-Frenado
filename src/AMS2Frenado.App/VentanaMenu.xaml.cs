@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -41,6 +42,14 @@ internal sealed partial class VentanaMenu : Window
     public event Action<ReferenciaGuia>? ReferenciaElegida;
     public event Action<string>? AtajoElegido;
     public event Action<DeslizadorDef, double>? Deslizado;
+    /// <summary>El usuario soltó la ventana despues de arrastrarla por la cabecera: (Left, Top) en DIP.</summary>
+    public event Action<double, double>? PosicionElegida;
+
+    /// <summary>Area de trabajo (DIP) del monitor que contiene el punto dado (DIP de pantalla). Lo pone el controlador.</summary>
+    public Func<double, double, AreaPantalla>? AreaEn { get; set; }
+    public bool Arrastrando => _arrastre.Activo;
+    private readonly ArrastreVentana _arrastre = new();
+    private UIElement? _agarre;
 
     /// <summary>Reloj en segundos (el del controlador) para la pregunta de salir.</summary>
     public Func<double> Reloj { get; set; } = () => 0;
@@ -56,6 +65,7 @@ internal sealed partial class VentanaMenu : Window
         TxtTituloAtajo.Text = Estilo.Espaciado("Atajo de bloqueo");
         TxtPreguntaSalir.Text = "¿SALIR?";
         TxtAtajoOtro.Text = MenuConfig.AtajoOtro;
+        foreach (var cab in new UIElement[] { CabPrincipal, CabDatos, CabAtajo }) ConectarArrastre(cab);
 
         // modo y referencia: segmentados (la opcion elegida va en blanco)
         foreach (var m in new[] { ModoApp.Grabar, ModoApp.GrabarSoloVos, ModoApp.Mostrar })
@@ -100,6 +110,57 @@ internal sealed partial class VentanaMenu : Window
         BtnSalir.Click += (_, _) => { _salir.Pedir(Reloj()); ActualizarSalir(Reloj()); };
         BtnSalirNo.Click += (_, _) => { _salir.Cancelar(); ActualizarSalir(Reloj()); };
         BtnSalirSi.Click += (_, _) => { if (_salir.Confirmar()) SalirConfirmado?.Invoke(); ActualizarSalir(Reloj()); };
+    }
+
+    // ---------------------------------------------------------------- mover la ventana desde la cabecera
+
+    /// <summary>
+    /// Arrastre MANUAL: la ventana es NOACTIVATE (nunca toma el foco, para no sacarselo a AMS2) y DragMove / WM_NCLBUTTONDOWN
+    /// (HTCAPTION) arrancan el bucle modal de movimiento del sistema, que sobre una ventana sin activar y con AllowsTransparency
+    /// no es fiable. Por eso: captura de mouse WPF en la cabecera + posicion del cursor con GetCursorPos (absoluta: mover la
+    /// ventana no realimenta el calculo) + SetWindowPos con SWP_NOACTIVATE. Los limites salen de <see cref="ArrastreVentana"/>
+    /// (Core, con pruebas). Los botones de la cabecera (cerrar, volver) marcan el clic como atendido y no arrancan el arrastre.
+    /// Compila, SIN EJECUTAR.
+    /// </summary>
+    private void ConectarArrastre(UIElement cabecera)
+    {
+        cabecera.MouseLeftButtonDown += (s, e) =>
+        {
+            if (e.Handled || _hwnd == IntPtr.Zero || !Win32.CursorEnPantalla(out int px, out int py)) return;
+            var (sx, sy) = EscalaDpi();
+            _arrastre.Iniciar(px / sx, py / sy, Left, Top);
+            _agarre = (UIElement)s;
+            _agarre.CaptureMouse();
+            e.Handled = true;
+        };
+        cabecera.MouseMove += (s, e) =>
+        {
+            if (!_arrastre.Activo || !ReferenceEquals(s, _agarre) || e.LeftButton != MouseButtonState.Pressed
+                || !Win32.CursorEnPantalla(out int px, out int py)) return;
+            var (sx, sy) = EscalaDpi();
+            double cx = px / sx, cy = py / sy;
+            var area = AreaEn?.Invoke(cx, cy) ?? new AreaPantalla(0, 0, SystemParameters.PrimaryScreenWidth, SystemParameters.PrimaryScreenHeight);
+            var (x, y) = _arrastre.Mover(cx, cy, area, ActualWidth, ActualHeight);
+            Win32.MoverSinActivar(_hwnd, (int)Math.Round(x * sx), (int)Math.Round(y * sy));
+        };
+        cabecera.MouseLeftButtonUp += (s, _) => { if (ReferenceEquals(s, _agarre)) _agarre!.ReleaseMouseCapture(); };
+        cabecera.LostMouseCapture += (s, _) => { if (ReferenceEquals(s, _agarre)) FinArrastre(); };
+    }
+
+    private void FinArrastre()
+    {
+        if (!_arrastre.Activo) return;
+        _arrastre.Terminar();
+        _agarre = null;
+        if (!_arrastre.Desplazado) return;      // un clic en la cabecera sin mover no cuenta como posicion elegida
+        var (x, y) = _arrastre.Posicion;
+        PosicionElegida?.Invoke(x, y);
+    }
+
+    private (double X, double Y) EscalaDpi()
+    {
+        try { var d = VisualTreeHelper.GetDpi(this); return (d.DpiScaleX, d.DpiScaleY); }
+        catch (Exception) { return (1, 1); }
     }
 
     private System.Windows.Controls.Primitives.ToggleButton Segmento(string texto, Action alElegir)

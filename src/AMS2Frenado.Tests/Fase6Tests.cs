@@ -181,8 +181,8 @@ public class MenuConfigTests
             Assert.DoesNotContain("rampa", d.Ayuda ?? "", StringComparison.OrdinalIgnoreCase);
         }
         // la bandeja usa los mismos textos
-        Assert.Equal(MenuConfig.Anticipacion.Etiqueta, MenuConfig.Etiquetas.Anticipacion);
-        Assert.Equal(MenuConfig.Rampa.Etiqueta, MenuConfig.Etiquetas.Aparicion);
+        Assert.Equal(MenuConfig.Etiquetas.Anticipacion, MenuConfig.Anticipacion.Etiqueta);
+        Assert.Equal(MenuConfig.Etiquetas.Aparicion, MenuConfig.Rampa.Etiqueta);
     }
 
     [Fact]

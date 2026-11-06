@@ -204,7 +204,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid x:Name="CabPrincipal" Grid.Row="0" Margin="0,0,0,12" Background="Transparent" Cursor="SizeAll">
                     <StackPanel HorizontalAlignment="Left">
                         <TextBlock x:Name="TxtTituloMenu" FontFamily="{StaticResource Barlow}" FontSize="22" FontWeight="Bold" Foreground="#FFFFFF"/>
                         <Rectangle Width="28" Height="3" Fill="#C62F26" HorizontalAlignment="Left" Margin="0,3,0,0"/>
@@ -301,7 +301,7 @@
 
             <!-- ============ pagina Datos ============ -->
             <StackPanel x:Name="PagDatos" Visibility="Collapsed">
-                <Grid Margin="0,0,0,14">
+                <Grid x:Name="CabDatos" Margin="0,0,0,14" Background="Transparent" Cursor="SizeAll">
                     <Button x:Name="BtnVolverDatos" Style="{StaticResource Boton}" Width="36" Padding="0" HorizontalAlignment="Left" ToolTip="Volver">
                         <Path Data="M10,2.5 L4.5,8 L10,13.5" Stroke="#DDE2E7" StrokeThickness="1.6" Stretch="None" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="16" Height="16"/>
                     </Button>
@@ -318,7 +318,7 @@
 
             <!-- ============ pagina Atajo de bloqueo ============ -->
             <StackPanel x:Name="PagAtajo" Visibility="Collapsed">
-                <Grid Margin="0,0,0,14">
+                <Grid x:Name="CabAtajo" Margin="0,0,0,14" Background="Transparent" Cursor="SizeAll">
                     <Button x:Name="BtnVolverAtajo" Style="{StaticResource Boton}" Width="36" Padding="0" HorizontalAlignment="Left" ToolTip="Volver">
                         <Path Data="M10,2.5 L4.5,8 L10,13.5" Stroke="#DDE2E7" StrokeThickness="1.6" Stretch="None" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="16" Height="16"/>
                     </Button>

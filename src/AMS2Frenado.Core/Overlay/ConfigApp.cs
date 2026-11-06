@@ -56,6 +56,11 @@ public sealed class ConfigApp
     public bool AvisoInicialMostrado { get; set; }
     /// <summary>Posicion de la ventana en DIP por monitor (clave: nombre del monitor). Vacio: se usa la esquina.</summary>
     public Dictionary<string, PosicionVentana> Posiciones { get; set; } = [];
+    /// <summary>
+    /// Ultima posicion (DIP de pantalla) donde el usuario dejo la ventana de ajustes arrastrandola por la cabecera; null = automatica
+    /// (junto a la barra de botones). Se lleva dentro del monitor donde cae al usarla.
+    /// </summary>
+    public PosicionVentana? AjustesPosicion { get; set; }
 
     public AtajoTeclado AtajoEfectivo => AtajoTeclado.Parsear(Atajo) ?? AtajoTeclado.PorDefecto;
 
@@ -75,6 +80,7 @@ public sealed class ConfigApp
         AvisoEscala = MedidasAviso.LimitarEscala(AvisoEscala);
         Posiciones = LimpiarPosiciones(Posiciones);
         AvisoPosiciones = LimpiarPosiciones(AvisoPosiciones);
+        if (AjustesPosicion is { } ap && (!double.IsFinite(ap.X) || !double.IsFinite(ap.Y))) AjustesPosicion = null;
     }
 
     private static Dictionary<string, PosicionVentana> LimpiarPosiciones(Dictionary<string, PosicionVentana>? d)
@@ -94,6 +100,7 @@ public sealed class ConfigApp
         AvisoPosiciones = new Dictionary<string, PosicionVentana>(o.AvisoPosiciones);
         Atajo = o.Atajo; AvisoInicialMostrado = o.AvisoInicialMostrado;
         Posiciones = new Dictionary<string, PosicionVentana>(o.Posiciones);
+        AjustesPosicion = o.AjustesPosicion is { } a ? new PosicionVentana { X = a.X, Y = a.Y } : null;
         Normalizar();
     }
 }
@@ -161,6 +168,7 @@ public sealed class AlmacenConfig
                 Atajo = Campo(o, "atajo", d.Atajo),
                 AvisoInicialMostrado = Campo(o, "avisoInicialMostrado", d.AvisoInicialMostrado),
                 Posiciones = Campo(o, "posiciones", new Dictionary<string, PosicionVentana>()),
+                AjustesPosicion = Campo<PosicionVentana?>(o, "ajustesPosicion", null),
             };
             c.Normalizar();
             return c;
