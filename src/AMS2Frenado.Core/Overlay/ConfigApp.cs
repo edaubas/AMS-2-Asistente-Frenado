@@ -7,7 +7,11 @@ using AMS2Frenado.Core.Guia;
 
 namespace AMS2Frenado.Core.Overlay;
 
-public enum ModoApp { Mostrar, Grabar }
+/// <summary>
+/// Mostrar: solo usa lo guardado. Grabar: graba IA y vos. GrabarSoloVos: graba unicamente al auto visto y no toca lo de
+/// la IA ya guardado. En config.json: "mostrar", "grabar", "grabarSoloVos".
+/// </summary>
+public enum ModoApp { Mostrar, Grabar, GrabarSoloVos }
 
 public sealed class PosicionVentana
 {
@@ -40,6 +44,8 @@ public sealed class ConfigApp
     public bool AvisoActivo { get; set; } = true;
     /// <summary>Segundos maximos que el aviso queda en pantalla si no frenas (1 a 2).</summary>
     public double AvisoDuracionS { get; set; } = AvisoFrenada.DuracionPorDefectoS;
+    /// <summary>Segundos antes del punto de frenado en que el simbolo empieza a aparecer (1 a 3).</summary>
+    public double AvisoRampaS { get; set; } = DecisorAviso.RampaPorDefectoS;
     /// <summary>Escala del simbolo, 0,5 a 3 sobre 120 px.</summary>
     public double AvisoEscala { get; set; } = 1.0;
     /// <summary>Posicion de la ventana del aviso en DIP por monitor. Vacio: centrado, en el tercio superior.</summary>
@@ -62,6 +68,7 @@ public sealed class ConfigApp
         var atajo = AtajoTeclado.Parsear(Atajo) ?? AtajoTeclado.PorDefecto;
         Atajo = atajo.Texto;
         AvisoDuracionS = AvisoFrenada.LimitarDuracion(AvisoDuracionS);
+        AvisoRampaS = DecisorAviso.LimitarRampa(AvisoRampaS);
         AvisoEscala = MedidasAviso.LimitarEscala(AvisoEscala);
         Posiciones = LimpiarPosiciones(Posiciones);
         AvisoPosiciones = LimpiarPosiciones(AvisoPosiciones);
@@ -80,7 +87,7 @@ public sealed class ConfigApp
     {
         Modo = o.Modo; Bloqueado = o.Bloqueado; Visible = o.Visible; Pitido = o.Pitido;
         ReferenciaPrincipal = o.ReferenciaPrincipal; Esquina = o.Esquina; Escala = o.Escala; Opacidad = o.Opacidad;
-        AvisoActivo = o.AvisoActivo; AvisoDuracionS = o.AvisoDuracionS; AvisoEscala = o.AvisoEscala;
+        AvisoActivo = o.AvisoActivo; AvisoDuracionS = o.AvisoDuracionS; AvisoRampaS = o.AvisoRampaS; AvisoEscala = o.AvisoEscala;
         AvisoPosiciones = new Dictionary<string, PosicionVentana>(o.AvisoPosiciones);
         Atajo = o.Atajo; AvisoInicialMostrado = o.AvisoInicialMostrado;
         Posiciones = new Dictionary<string, PosicionVentana>(o.Posiciones);
@@ -144,6 +151,7 @@ public sealed class AlmacenConfig
                 Opacidad = Campo(o, "opacidad", d.Opacidad),
                 AvisoActivo = Campo(o, "avisoActivo", d.AvisoActivo),
                 AvisoDuracionS = Campo(o, "avisoDuracionS", d.AvisoDuracionS),
+                AvisoRampaS = Campo(o, "avisoRampaS", d.AvisoRampaS),
                 AvisoEscala = Campo(o, "avisoEscala", d.AvisoEscala),
                 AvisoPosiciones = Campo(o, "avisoPosiciones", new Dictionary<string, PosicionVentana>()),
                 Atajo = Campo(o, "atajo", d.Atajo),

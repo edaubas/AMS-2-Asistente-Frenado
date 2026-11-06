@@ -135,20 +135,49 @@ public sealed class OverlayServicioTests : IDisposable
         }
     }
 
+    /// <summary>Como <see cref="Correr"/>, pero el conductor nunca toca el freno (o usa el pedal natural del simulador).</summary>
+    private static List<VistaOverlay> CorrerSinFrenar(ServicioOverlay s, Simulador sim, int vueltas, double tIni, bool pedalNatural = false)
+    {
+        var res = new List<VistaOverlay>();
+        uint objetivo = sim.Autos[0].Vueltas + (uint)vueltas;
+        for (int i = 0; i < 200_000 && sim.Autos[0].Vueltas < objetivo; i++)
+        {
+            var sm = sim.Paso();
+            if (!pedalNatural) sm.mBrake = 0;
+            res.Add(s.Paso(Ok(sm), tIni + sim.Tiempo));
+        }
+        return res;
+    }
+
     [Fact]
     public void ElPitidoSuenaUnaVezPorFrenadaYSoloSiEstaActivado()
     {
         var s = Grabado(out var sim);
-        var sin = Correr(s, sim, 2, 1000);
+        var sin = CorrerSinFrenar(s, sim, 2, 1000);
         Assert.DoesNotContain(sin, v => v.Pitar);
         s.Pitido = true;
-        var con = Correr(s, sim, 2, 2000);
+        var con = CorrerSinFrenar(s, sim, 2, 2000);          // el conductor no frena: pita en cada punto de frenado
         int pitidos = con.Count(v => v.Pitar);
         int entradas = 0;
         for (int i = 1; i < con.Count; i++)
             if (con[i].Panel.Estado == EstadoPanel.Frena && con[i - 1].Panel.Estado != EstadoPanel.Frena) entradas++;
         Assert.Equal(entradas, pitidos);
         Assert.True(pitidos >= 3);
+    }
+
+    [Fact]
+    public void ElPitidoNoSuenaSiYaVasFrenandoAlLlegarAlPunto()
+    {
+        var s = Grabado(out var sim);
+        s.Pitido = true;
+        // pedal natural del simulador: ya esta apretado en (o antes de) el punto de frenado de la guia
+        var con = CorrerSinFrenar(s, sim, 3, 2000, pedalNatural: true);
+        int entradas = 0;
+        for (int i = 1; i < con.Count; i++)
+            if (con[i].Panel.Estado == EstadoPanel.Frena && con[i - 1].Panel.Estado != EstadoPanel.Frena) entradas++;
+        Assert.True(entradas >= 3);
+        Assert.All(con.Where(v => v.Pitar), v => Assert.True(v.Freno <= 0.15));
+        Assert.True(con.Count(v => v.Pitar) < entradas, "al menos algun punto se tomo ya frenando");
     }
 
     [Fact]

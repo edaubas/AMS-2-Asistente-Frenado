@@ -16,7 +16,7 @@ public sealed record EtiquetaRef(FormaMarcador Forma, string Texto, string Color
 public sealed record MarcadorRegla(FormaMarcador Forma, string Color, double Fraccion);
 
 public sealed record ContadoresGrabacion(
-    string Encabezado, string Ia, string IaDetalle, string Vos, string VosDetalle, string Pie);
+    string Encabezado, string Ia, string IaDetalle, string Vos, string VosDetalle, string Pie, bool SoloVos = false);
 
 public enum TipoTarjeta { Ninguna, SinDatos, Lejos, Guia, Grabando }
 

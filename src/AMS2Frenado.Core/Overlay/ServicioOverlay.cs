@@ -14,7 +14,10 @@ public sealed record VistaOverlay
     public string TituloPista { get; init; } = "";
     /// <summary>Chip con la clase ("GT3"); vacio si no se conoce.</summary>
     public string ChipClase { get; init; } = "";
+    /// <summary>Verdadero en cualquiera de los dos modos de grabacion.</summary>
     public bool Grabando { get; init; }
+    /// <summary>Modo "Grabar solo vos": la IA no se graba (chip "GRABANDO · SOLO VOS").</summary>
+    public bool SoloVos { get; init; }
     /// <summary>Pedal de freno del auto visto, 0..1 (0 sin lectura valida).</summary>
     public double Freno { get; init; }
     /// <summary>Verdadero solo en el tick en que hay que pitar.</summary>
@@ -25,8 +28,9 @@ public sealed record VistaOverlay
 
 /// <summary>
 /// Integracion de la fase 5: en cada tick recibe una lectura y devuelve lo que hay que mostrar.
-/// Modo Grabar: alimenta al <see cref="Grabador"/> (auto visto = vos, el resto = IA por clase) y ademas muestra la
-/// guia con lo ya guardado. Modo Mostrar: carga clase.json y mapa.json de pista + variante + clase y alimenta al
+/// Modo Grabar (todo): alimenta al <see cref="Grabador"/> (auto visto = vos, el resto = IA por clase) y ademas muestra la
+/// guia con lo ya guardado. Modo Grabar solo vos: igual, pero el grabador procesa unicamente al auto visto y no toca
+/// lo de la IA ya guardado. Modo Mostrar: carga clase.json y mapa.json de pista + variante + clase y alimenta al
 /// <see cref="MotorGuia"/>. Sin datos, sin juego o con mVersion distinta de 14, avisa en el panel.
 /// Logica pura: no usa ventanas ni relojes (el tiempo llega por parametro). Sin probar en AMS2 en vivo.
 /// </summary>
@@ -37,13 +41,15 @@ public sealed class ServicioOverlay
 
     private readonly Almacen _almacen;
     private readonly MotorGuia _motor;
-    private readonly GestorPitido _pitido = new();
+    private readonly DecisorAviso _decisor = new();
     private Grabador? _grabador;
     private ModoApp _modo = ModoApp.Mostrar;
 
     private ContextoJuego? _ctx;
     private DatosCargados _datos = new(null, null, 0);
     private readonly AvisoFrenada _aviso = new();
+    private bool _pitidoActivo;
+    private DecisionAviso _decision = DecisionAviso.Nada;
     private double _freno;
     private double _tRecarga = double.NegativeInfinity;
     private uint? _ultimaSecuencia;
@@ -63,30 +69,39 @@ public sealed class ServicioOverlay
         set
         {
             if (value == _modo) return;
-            if (_modo == ModoApp.Grabar) GuardarGrabacion();
+            if (EsGrabacion(_modo)) GuardarGrabacion();
             _modo = value;
             _tRecarga = double.NegativeInfinity;      // al volver a mostrar, recarga lo recien grabado
             _ultimaSecuencia = null;
         }
     }
 
+    private static bool EsGrabacion(ModoApp m) => m is ModoApp.Grabar or ModoApp.GrabarSoloVos;
+
+    /// <summary>Referencia que manda en la guia y, sola, en el pitido y el simbolo.</summary>
     public ReferenciaGuia ReferenciaPrincipal { get; set; } = ReferenciaGuia.Ia;
     /// <summary>Aviso de frenada (simbolo en ventana aparte): activado por defecto.</summary>
     public bool AvisoActivo { get => _aviso.Habilitado; set => _aviso.Habilitado = value; }
-    public double AvisoDuracionS { get => _aviso.DuracionS; set => _aviso.DuracionS = value; }
+    public double AvisoDuracionS
+    {
+        get => _aviso.DuracionS;
+        set { _aviso.DuracionS = value; _decisor.DuracionS = value; }
+    }
+    /// <summary>Segundos antes del punto de frenado en que el simbolo empieza a aparecer (1 a 3).</summary>
+    public double AvisoRampaS { get => _decisor.RampaS; set => _decisor.RampaS = value; }
     /// <summary>"Probar aviso": lo muestra durante la duracion configurada sin estar en pista.</summary>
     public void ProbarAviso(double segundos) => _aviso.Probar(segundos);
 
     /// <summary>
-    /// Opacidad del aviso de frenada en este instante. Se llama en cada tick de la ventana (~60 Hz), con o sin muestra
-    /// nueva, para que el fundido de 80 ms avance con el reloj y no con la telemetria (~27 Hz).
+    /// Cuadro del aviso de frenada en este instante. Se llama en cada tick de la ventana (~60 Hz), con o sin muestra
+    /// nueva, para que el fundido avance con el reloj y no con la telemetria (~27 Hz). La decision (rampa, pleno,
+    /// "ya frenando") se toma una vez por muestra en <see cref="Paso"/>.
     /// </summary>
-    public CuadroAviso ActualizarAviso(double segundos)
-        => _aviso.Actualizar(_ultima.Lectura == EstadoLectura.Ok ? _ultima.Guia : null, _freno, segundos);
+    public CuadroAviso ActualizarAviso(double segundos) => _aviso.Actualizar(_decision, segundos);
 
     /// <summary>Fuerza releer los archivos de datos (por ejemplo, despues de importar un respaldo).</summary>
     public void ForzarRecarga() { _tRecarga = double.NegativeInfinity; _ultimaSecuencia = null; }
-    public bool Pitido { get => _pitido.Habilitado; set => _pitido.Habilitado = value; }
+    public bool Pitido { get => _pitidoActivo; set => _pitidoActivo = value; }
     public Almacen Almacen => _almacen;
     public VistaOverlay Ultima => _ultima;
     /// <summary>Ultimo error al grabar o guardar (para un aviso en la bandeja); null si no hubo.</summary>
@@ -105,9 +120,11 @@ public sealed class ServicioOverlay
         {
             case EstadoLectura.SinJuego:
                 _ctx = null; _ultimaSecuencia = null; _huboSesion = false; _freno = 0;
+                SinAviso();
                 return _ultima = new VistaOverlay { Lectura = r.Estado, Panel = ConstructorVista.EsperandoAms2() };
             case EstadoLectura.VersionDistinta:
                 _ctx = null; _ultimaSecuencia = null; _huboSesion = false; _freno = 0;
+                SinAviso();
                 return _ultima = new VistaOverlay { Lectura = r.Estado, Panel = ConstructorVista.VersionNoCompatible(r.Version) };
             case EstadoLectura.Ok:
                 return Procesar(r.Datos, segundos);
@@ -119,7 +136,10 @@ public sealed class ServicioOverlay
     private VistaOverlay Procesar(in SharedMemory sm, double t)
     {
         if (sm.mVersion != ConstantesShm.Version)
+        {
+            SinAviso();
             return _ultima = new VistaOverlay { Lectura = EstadoLectura.VersionDistinta, Panel = ConstructorVista.VersionNoCompatible(sm.mVersion) };
+        }
 
         // La telemetria efectiva llega a ~27-39 Hz y se lee a ~60 Hz: una muestra repetida no se procesa dos veces.
         if (_ultimaSecuencia == sm.mSequenceNumber && _ultima.Lectura == EstadoLectura.Ok) return _ultima with { Pitar = false };
@@ -131,6 +151,7 @@ public sealed class ServicioOverlay
         {
             // menu, pausa o replay: se conserva lo ultimo; si nunca hubo sesion, se pide entrar a pista
             if (_huboSesion) return _ultima with { Pitar = false };
+            SinAviso();
             return _ultima = new VistaOverlay { Lectura = EstadoLectura.Ok, Panel = ConstructorVista.EntrarAPista() };
         }
         _huboSesion = true;
@@ -138,11 +159,16 @@ public sealed class ServicioOverlay
         if (!ctx.Equals(_ctx)) { _ctx = ctx; Recargar(t); }
         else if (double.IsNegativeInfinity(_tRecarga)) Recargar(t);      // cambio de modo: se relee lo guardado
 
-        if (_modo == ModoApp.Grabar)
+        bool grabando = EsGrabacion(_modo), soloVos = _modo == ModoApp.GrabarSoloVos;
+        if (grabando)
         {
             try
             {
-                _grabador ??= new Grabador(_almacen);
+                if (_grabador is null || _grabador.SoloVos != soloVos)
+                {
+                    GuardarGrabacion();            // al pasar de "todo" a "solo vos" (o al reves) se guarda lo juntado y se empieza limpio
+                    _grabador = new Grabador(_almacen, soloVos: soloVos);
+                }
                 _grabador.Procesar(in sm, t);
                 _avisoGrabacion = _grabador.UltimoErrorGuardado is { } e ? "No se pudo guardar: " + e.Message : null;
             }
@@ -154,28 +180,35 @@ public sealed class ServicioOverlay
         }
 
         _motor.ReferenciaPrincipal = ReferenciaPrincipal;
-        _motor.Grabando = _modo == ModoApp.Grabar;
+        _motor.Grabando = grabando;
         int visto = Math.Clamp(sm.mViewedParticipantIndex, 0, ConstantesShm.MaxParticipantes - 1);
         double d = sm.mParticipantInfo[visto].mCurrentLapDistance;
         double kmh = sm.mSpeed * 3.6;
         bool valida = sm.mPitModes[visto] == 0 && double.IsFinite(d) && double.IsFinite(kmh);
         var pg = _motor.Actualizar(new EntradaGuia(t, d, kmh, largo, valida));
 
-        var vista = ConstructorVista.Construir(pg, new ContextoVista(ctx.Clase, ctx.Pista, ctx.Variante, largo));
-        if (_modo == ModoApp.Grabar && vista.Tipo is TipoTarjeta.SinDatos or TipoTarjeta.Lejos)
-            vista = Contadores(sm, ctx, visto);
+        var vista = ConstructorVista.Construir(pg, new ContextoVista(ctx.Clase, ctx.Pista, ctx.Variante, largo, _datos.MotivoClase));
+        if (grabando && vista.Tipo is TipoTarjeta.SinDatos or TipoTarjeta.Lejos)
+            vista = Contadores(sm, ctx, visto, soloVos);
 
         // mBrake: pedal del auto visto (0..1). Si el valor no sirve se toma como "no frena".
         _freno = float.IsFinite(sm.mBrake) ? Math.Clamp(sm.mBrake, 0f, 1f) : 0;
+
+        // una sola decision para el simbolo y el pitido, con la referencia principal elegida
+        double vms = double.IsFinite(sm.mSpeed) ? sm.mSpeed : 0;
+        _decision = _decisor.Evaluar(pg, ReferenciaPrincipal, vms, _freno, t);
 
         return _ultima = new VistaOverlay
         {
             Lectura = EstadoLectura.Ok, Panel = vista, Guia = pg,
             TituloPista = ctx.Variante.Length == 0 ? ctx.Pista : $"{ctx.Pista} · {ctx.Variante}",
-            ChipClase = ctx.Clase, Grabando = _modo == ModoApp.Grabar,
-            Freno = _freno, Pitar = _pitido.Debe(pg), Aviso = _avisoGrabacion,
+            ChipClase = ctx.Clase, Grabando = grabando, SoloVos = soloVos,
+            Freno = _freno, Pitar = _pitidoActivo && _decision.Pitar, Aviso = _avisoGrabacion,
         };
     }
+
+    /// <summary>Sin lectura valida: se apaga el aviso y se olvida la pasada en curso.</summary>
+    private void SinAviso() { _decisor.Reiniciar(); _decision = DecisionAviso.Nada; }
 
     private void Recargar(double t, bool soloSiCambio = false)
     {
@@ -191,11 +224,25 @@ public sealed class ServicioOverlay
         _motor.CargarDatos(_datos.Clase, _datos.Mapa);
     }
 
-    private VistaPanel Contadores(in SharedMemory sm, ContextoJuego ctx, int visto)
+    private VistaPanel Contadores(in SharedMemory sm, ContextoJuego ctx, int visto, bool soloVos)
     {
         var estados = _grabador?.Estados() ?? [];
         var enPista = estados.Where(e => e.Pista == ctx.Pista && e.Variante == ctx.Variante).ToList();
         var mia = enPista.FirstOrDefault(e => e.Clase == ctx.Clase);
+        if (soloVos)
+        {
+            // la IA no se graba: solo cuenta lo tuyo, y la IA ya guardada no se toca
+            return new VistaPanel
+            {
+                Tipo = TipoTarjeta.Grabando, Estado = EstadoPanel.SinDatos,
+                Contadores = new ContadoresGrabacion(
+                    Encabezado: ctx.Clase,
+                    Ia: "", IaDetalle: "",
+                    Vos: (mia?.VueltasVos ?? 0).ToString(), VosDetalle: "vueltas válidas",
+                    Pie: "Solo se graba tu auto: la IA ya guardada no se toca. Parar de grabar: Bandeja › Modo › Mostrar.",
+                    SoloVos: true),
+            };
+        }
         int autos = 0;
         int n = Math.Clamp(sm.mNumParticipants, 0, ConstantesShm.MaxParticipantes);
         for (int i = 0; i < n; i++)

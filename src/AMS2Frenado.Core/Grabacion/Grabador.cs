@@ -22,7 +22,8 @@ public sealed record EstadoClase(string Pista, string Variante, string Clase,
 /// El auto visto (mViewedParticipantIndex) se detecta con pedales y es "vos"; los demas se detectan
 /// por la caida de velocidad y forman la "ia". Una vuelta cuenta solo si no es la primera que se ve,
 /// no pasa por boxes (mPitModes != 0) y no esta invalidada (mLapsInvalidated / mLapInvalidated).
-/// Solo lee datos: nunca toca el juego.
+/// Con <see cref="SoloVos"/> procesa unicamente al auto visto: la IA no se vuelve a grabar y lo que ya estaba guardado
+/// de la IA (bloques "ia", curvas solo de la IA, nombres y notas) no se toca. Solo lee datos: nunca toca el juego.
 /// </summary>
 public sealed class Grabador
 {
@@ -83,12 +84,16 @@ public sealed class Grabador
     public int Procesadas { get; private set; }
     public int Descartadas { get; private set; }
     public Exception? UltimoErrorGuardado { get; private set; }
+    /// <summary>Modo "Grabar solo vos": no se procesa a la IA y no se pisa lo guardado de la IA ni el mapa existente.</summary>
+    public bool SoloVos { get; }
 
     /// <param name="intervaloGuardado">Segundos minimos entre guardados automaticos (0 = guarda en cada vuelta valida).</param>
-    public Grabador(Almacen almacen, double intervaloGuardado = 15)
+    /// <param name="soloVos">Solo graba al auto visto (ver <see cref="SoloVos"/>).</param>
+    public Grabador(Almacen almacen, double intervaloGuardado = 15, bool soloVos = false)
     {
         _almacen = almacen;
         _intervaloGuardado = intervaloGuardado;
+        SoloVos = soloVos;
     }
 
     public ResultadoGrabacion Procesar(ResultadoLectura lectura, double segundos)
@@ -122,6 +127,7 @@ public sealed class Grabador
         {
             if (sm.mParticipantInfo[i].mIsActive == 0) { _part[i] = null; continue; }
             bool esVos = i == visto;
+            if (SoloVos && !esVos) { _part[i] = null; continue; }
             string clase = esVos ? Texto.Leer(sm.mCarClassName) : "";
             if (clase.Length == 0) { var arr = sm.mCarClassNames[i]; clase = Texto.Leer(arr); }
             if (clase.Length == 0) { _part[i] = null; continue; }
@@ -258,7 +264,7 @@ public sealed class Grabador
         return new DatosClase
         {
             Pista = pista, Variante = variante, Clase = clase, Largo = Math.Round(ps.Largo, 1),
-            Curvas = Fusion.Fusionar(nuevas, previo?.Curvas ?? [], ps.Largo),
+            Curvas = Fusion.Fusionar(nuevas, previo?.Curvas ?? [], ps.Largo, conservarNoEmparejadas: SoloVos),
             Extra = previo?.Extra,
         };
     }
@@ -275,7 +281,9 @@ public sealed class Grabador
             {
                 var mapa = ps.Mapa.Construir(ps.Pista, ps.Variante);
                 var previo = _almacen.LeerMapa(ps.Pista, ps.Variante);
-                if (mapa is not null && (previo is null || previo.Vueltas <= mapa.Vueltas))
+                // solo vos: el mapa existente (armado con la IA y tus vueltas) no se toca; si no hay ninguno, se crea con las tuyas
+                bool escribir = SoloVos ? previo is null : previo is null || previo.Vueltas <= mapa?.Vueltas;
+                if (mapa is not null && escribir)
                 {
                     mapa.Carteles = previo?.Carteles;      // lo editado a mano no se pisa
                     mapa.Extra = previo?.Extra;
