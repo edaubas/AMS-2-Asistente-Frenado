@@ -63,3 +63,37 @@ Cuando terminen los ajustes de `fase-5c-ajustes` y se corrijan sus errores, se a
 - Correcciones 1 sin ejecutar en Windows: ventana de ajustes movible, ícono (exe, diagnóstico, bandeja) y chip de modo sin juego (`docs/FASE-6-PRUEBA.md`, sección "Correcciones 1").
 - Tooltips y teclado (Esc) en ventanas sin activación: pueden no funcionar (P24, P31).
 - Release por tag.
+
+## Para revisar antes del próximo build (anotado el 6 de noviembre de 2026)
+
+Solo anotado: el usuario va a hacer pruebas y avisa antes de implementar.
+
+### Bug: el overlay desaparece al abrir la app y vuelve a aparecer solo
+
+- **Síntoma:** al abrir `AMS2Frenado.exe`, el overlay desaparece, pero el proceso sigue corriendo (se ve en el Administrador de tareas, con 0 % de CPU y ~0,2 MB de memoria) y al rato el overlay vuelve a aparecer.
+- **Estado: ANALIZADO (6 de noviembre de 2026), sin arreglar.** Informe en `docs/ANALISIS-OVERLAY-DESAPARECE.md` (rama `analisis-overlay-desaparece`). Causa más probable (hipótesis, sin ejecutar): el proceso todavía no arrancó (0,2 MB y 0 % de CPU no es una app WPF iniciada) por verificación de Defender/SmartScreen o por la autoextracción y descompresión del .exe de un solo archivo sin firmar (`AMS2Frenado.App.csproj:13,15`). Otras: excepción de arranque tragada por `ev.Handled = true` (`App.xaml.cs:30`) con `OnExplicitShutdown`; `Salir()` que falla antes de `Shutdown()`. Se agregó un **registro de diagnóstico opcional** (apagado por defecto): `AMS2Frenado.exe --diagnostico`, o ⚙ › Datos / bandeja › "Guardar registro de diagnóstico"; escribe `%APPDATA%\AMS2AsistenteFrenado\registro.log`. Falta que el usuario lo pruebe y mande el registro (qué pedir: sección "Qué pedirle al usuario" del informe). Todavía no se sabe si pasa con AMS2 cerrado, abierto o en pausa, ni cuánto tarda en volver.
+- **Hipótesis a verificar** (ninguna comprobada, no se puede ejecutar WPF desde el entorno de desarrollo):
+  - La ventana pierde el orden "siempre arriba" frente a AMS2 en Borderless y vuelve cuando el juego cede el foco.
+  - El overlay arranca oculto o colapsado hasta la primera lectura válida o hasta el primer tick de reposicionamiento (la ventana grande conserva el contenido colapsado cuando se oculta, y la barra de botones se reposiciona en cada tick).
+  - Una posición guardada en `config.json` que queda fuera de pantalla hasta que se corrige.
+  - Un `mutex` de instancia única que deja una instancia vieja sin ventana visible.
+- **Qué pedir al usuario para acotarlo:** si ocurre con AMS2 cerrado, cuánto tarda en volver, si lo vuelve a mostrar al tocar el ícono de la bandeja, y el contenido de `config.json`.
+
+### Cambio de menú: orden y nombre de la anticipación
+
+- En el menú de Ajustes, dentro de "Aviso de frenada", el control de anticipación va **debajo del título "Aviso de frenada" y arriba de "Símbolo"**.
+- La etiqueta pasa a ser solamente **"Anticipación de aviso"**, sin la aclaración entre paréntesis. La ayuda de abajo ("Segundos antes del punto de frenado en que suena el pitido y el símbolo llega al 100 %. 0 = justo en el punto.") se mantiene.
+- Mismo cambio de nombre en el submenú de la bandeja.
+
+### Cambio de diseño: textura de fondo de carbono forjado
+
+- **Pedido:** usar como fondo de la app una textura de este estilo: **carbono forjado** (fibra de carbono picada: astillas rectangulares de distintos tamaños, giradas al azar, en grises muy oscuros con vetas finas más claras). El usuario pasó una foto de referencia. Hoy el fondo usa una diagonal fina al 4 % (tipo carbono tejido).
+- **La foto no se sube al repo** (material de terceros). Solo sirve de referencia.
+- **Supuestos** (sin confirmar):
+  - "Fondo de la app" = los fondos de los paneles del overlay y del menú de Ajustes, no el escritorio ni la ventana del símbolo.
+  - Se genera una textura propia, no se usa la foto.
+- **A resolver al implementarlo:**
+  - Cómo generarla barata en WPF: una baldosa repetible hecha con vectores (astillas como rectángulos girados, con un patrón fijo generado por semilla) o una imagen pequeña propia embebida. Debe repetirse sin costuras visibles.
+  - Que no baje la legibilidad: el texto y los marcadores deben seguir cumpliendo contraste de 4,5:1 con el pico más claro de la textura (se revalida con `docs/ui/contraste_fase6.py`). Si hace falta, la textura va con menos contraste que la foto.
+  - Que no genere "moiré" ni consumo de CPU notable al redibujar a 60 Hz.
+  - Pasa por el Agente 2 (UI/UX) para actualizar la spec si cambia alguna medida o color.
