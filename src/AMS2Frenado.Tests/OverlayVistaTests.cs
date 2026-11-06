@@ -196,7 +196,7 @@ public sealed class OverlayVistaTests
         var v = ConstructorVista.SinDatos(Ctx);
         Assert.Equal("SIN DATOS", v.Titulo);
         Assert.Equal("No hay curvas guardadas para GT3 en Pista de ejemplo · GP.", v.Linea1);
-        Assert.Equal("Bandeja › Modo › Grabar todo y da unas 10 vueltas con IA en pista.", v.Linea2);
+        Assert.Equal("Con el botón ⇄ › Grabar todo, da unas 10 vueltas con IA en pista.", v.Linea2);
         Assert.Equal("ESPERANDO AMS2", ConstructorVista.EsperandoAms2().Titulo);
         Assert.Contains("Project CARS 2", ConstructorVista.EsperandoAms2().Linea2);
         Assert.Contains("13", ConstructorVista.VersionNoCompatible(13).Linea1);

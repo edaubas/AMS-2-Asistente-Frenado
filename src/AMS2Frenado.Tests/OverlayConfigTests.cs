@@ -149,7 +149,7 @@ public sealed class OverlayConfigTests : IDisposable
         var c = new AlmacenConfig(Ruta).Cargar();
         Assert.Equal(ModoApp.Mostrar, c.Modo);               // enum desconocido: por defecto
         Assert.Equal(1.5, c.Escala);                         // limitada
-        Assert.Equal(0.80, c.Opacidad);
+        Assert.Equal(0.85, c.Opacidad);                      // minimo nuevo de la fase 6
         Assert.True(c.Pitido);                               // los campos buenos se conservan
         Assert.Equal("Ctrl+Alt+L", c.Atajo);                 // sin modificador: invalido
         Assert.Equal(Esquina.ArribaDerecha, c.Esquina);
@@ -198,11 +198,11 @@ public sealed class OverlayConfigTests : IDisposable
     [Fact]
     public void OpacidadSoloDelFondoEnRango()
     {
-        Assert.Equal(0.80, MedidasUi.AlfaDeSlider(0), 6);
+        Assert.Equal(0.85, MedidasUi.AlfaDeSlider(0), 6);
         Assert.Equal(0.95, MedidasUi.AlfaDeSlider(1), 6);
-        Assert.Equal(0.80, MedidasUi.AlfaDeSlider(-3), 6);
-        Assert.Equal(0.5, MedidasUi.SliderDeAlfa(0.875), 6);
-        Assert.Equal(1.0, MedidasUi.AlfaPanel(0.8, desbloqueada: true));     // desbloqueada: 100 %
+        Assert.Equal(0.85, MedidasUi.AlfaDeSlider(-3), 6);
+        Assert.Equal(0.5, MedidasUi.SliderDeAlfa(0.90), 6);
+        Assert.Equal(1.0, MedidasUi.AlfaPanel(0.85, desbloqueada: true));     // desbloqueada: 100 %
         Assert.Equal(320, MedidasUi.AnchoDeEscala(1));
         Assert.Equal(240, MedidasUi.AnchoDeEscala(0.1));
         Assert.Equal(480, MedidasUi.AnchoDeEscala(9));

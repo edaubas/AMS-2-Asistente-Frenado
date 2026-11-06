@@ -253,7 +253,7 @@ public sealed class ServicioOverlay
                     Encabezado: ctx.Clase,
                     Ia: "", IaDetalle: "",
                     Vos: (mia?.VueltasVos ?? 0).ToString(), VosDetalle: "vueltas válidas",
-                    Pie: "Solo se graba tu auto: la IA ya guardada no se toca. Parar de grabar: Bandeja › Modo › Mostrar.",
+                    Pie: "Solo se graba tu auto: la IA ya guardada no se toca. Parar de grabar: ⇄ › Mostrar.",
                     SoloVos: true),
             };
         }
@@ -266,7 +266,7 @@ public sealed class ServicioOverlay
             if (Texto.Leer(arr) == ctx.Clase) autos++;
         }
         var otras = enPista.Where(e => e.Clase != ctx.Clase).Select(e => e.Clase).ToList();
-        string pie = "Parar de grabar: Bandeja › Modo › Mostrar.";
+        string pie = "Parar de grabar: ⇄ › Mostrar.";
         if (otras.Count > 0) pie = $"Otras clases en pista ({string.Join(", ", otras)}) también se graban. " + pie;
         return new VistaPanel
         {

@@ -43,13 +43,13 @@ public static class ConstructorVista
         // un archivo que no se pudo leer manda sobre cualquier otra causa: el motor lo ve como "sin curvas"
         if (c.MotivoArchivo == MotivoLectura.Danado)
             return Aviso("SIN DATOS", "No se pudo leer el archivo de datos.",
-                $"Revisá {archivo} en la carpeta de datos (Bandeja › Datos) o restaurá su copia .bak.");
+                $"Revisá {archivo} en la carpeta de datos (⚙ › Datos) o restaurá su copia .bak.");
         return p.Causa switch
         {
             CausaSinDatos.EnBoxes => Aviso("SIN DATOS", "En boxes: la guía arranca al salir a pista."),
             CausaSinDatos.LargoDistinto => Aviso("SIN DATOS",
                 string.Create(ci, $"Largo de pista distinto al guardado (guardado {Math.Round(p.LargoGuardadoM):0} m, juego {Math.Round(p.LargoJuegoM):0} m)."),
-                "Puede ser otra variante o una versión distinta de la pista. Regrabá la clase en Bandeja › Modo › Grabar todo."),
+                "Puede ser otra variante o una versión distinta de la pista. Regrabá la clase con el botón ⇄ › Grabar todo."),
             CausaSinDatos.CurvasInvalidas => Aviso("SIN DATOS", "Datos sin curvas válidas.",
                 $"Las curvas de {archivo} no tienen un frenado utilizable. Regrabá la clase."),
             _ => SinCurvas(c),
@@ -63,7 +63,7 @@ public static class ConstructorVista
             : c.Variante.Length == 0 ? c.Pista : $"{c.Pista} · {c.Variante}";
         string clase = c.Clase.Length == 0 ? "" : $" para {c.Clase}";
         return Aviso("SIN DATOS", $"No hay curvas guardadas{clase} en {donde}.",
-            "Bandeja › Modo › Grabar todo y da unas 10 vueltas con IA en pista.");
+            "Con el botón ⇄ › Grabar todo, da unas 10 vueltas con IA en pista.");
     }
 
     public static VistaPanel SinDatos(ContextoVista c) => SinCurvas(c);
