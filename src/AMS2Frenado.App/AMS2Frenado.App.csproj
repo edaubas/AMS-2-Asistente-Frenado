@@ -7,6 +7,8 @@
     <AssemblyName>AMS2Frenado</AssemblyName>
     <!-- con PublishSingleFile, empaqueta tambien las DLL nativas de WPF dentro del .exe -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- comprime el contenido del .exe: pesa menos, arranca un poco mas lento -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AMS2Frenado.Core\AMS2Frenado.Core.csproj" />
