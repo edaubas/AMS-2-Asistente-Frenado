@@ -62,7 +62,7 @@ Detalle en `docs/UI-SPEC.md` 7.14 y qué volver a probar en `docs/FASE-6-PRUEBA.
 - "Anticipación (pitido y símbolo)" y "Aparición del símbolo" (antes "Anticipación del aviso" e "Inicio de la rampa"), en el menú y en la bandeja.
 - **Bug del chip de modo:** ahora MOSTRAR / GRABANDO / GRABANDO · SOLO VOS sigue el modo elegido con o sin AMS2 (`ServicioOverlay`; prueba `ChipModoTests`).
 - **Ventana de ajustes movible** por su cabecera (arrastre manual con límites de pantalla; recuerda la posición, `ajustesPosicion` en `config.json`).
-- **Ícono propio** (cuadrado rojo con "2" y cinta "AF"): `src/AMS2Frenado.App/Recursos/icono.svg` y `.ico`, vista previa en `docs/ui/icono-vista-previa.png`, script en `tools/icono/`.
+- **Ícono propio** (ficha roja con pestaña oscura "FRENADO", "2" grande y etiqueta "AF"; diseño original inspirado en la composición del ícono del juego, ver `tools/icono/LEEME.md`): `src/AMS2Frenado.App/Recursos/icono.svg` y `.ico`, vista previa en `docs/ui/icono-vista-previa.png`, script en `tools/icono/`.
 
 ## Fase 5d: sincronía del símbolo con el pitido y anticipación
 
