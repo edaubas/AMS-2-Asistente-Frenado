@@ -113,14 +113,14 @@ internal sealed class Bandeja : IDisposable
         }
         _menu.Items.Add(tamAviso);
         // submenu provisorio hasta que exista el deslizador del menu de configuracion (0 a 2,0 s, paso 0,1 s)
-        var antic = new Forms.ToolStripMenuItem("Anticipación del pitido y símbolo");
+        var antic = new Forms.ToolStripMenuItem(MenuConfig.Etiquetas.Anticipacion);
         foreach (var d in DecisorAviso.AnticipacionesSugeridasS)
         {
             var it = Item(d == 0 ? "0 s (en el punto de frenado)" : $"{d:0.0} s antes del punto".Replace('.', ','), () => AnticipacionElegida?.Invoke(d));
             _anticipaciones[d] = it; antic.DropDownItems.Add(it);
         }
         _menu.Items.Add(antic);
-        var rampaAviso = new Forms.ToolStripMenuItem("Inicio de la rampa del símbolo");
+        var rampaAviso = new Forms.ToolStripMenuItem(MenuConfig.Etiquetas.Aparicion);
         foreach (var d in new[] { 1.0, 1.5, 2.0, 2.5, 3.0 })
         {
             var it = Item($"{d:0.0} s antes", () => RampaAvisoElegida?.Invoke(d));

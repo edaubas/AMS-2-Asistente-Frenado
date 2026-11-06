@@ -53,6 +53,15 @@ public sealed class MenuConfig
     public static readonly string[] AtajosSugeridos = ["Ctrl+Alt+L", "Ctrl+Alt+O", "Ctrl+Shift+F9", "Ctrl+Alt+F10"];
     public const string AtajoOtro = "Otro: editá \"atajo\" en config.json";
 
+    /// <summary>Textos de los deslizadores del aviso que se repiten en la bandeja (una sola fuente).</summary>
+    public static class Etiquetas
+    {
+        /// <summary>Vale para el pitido Y para el simbolo (correcciones-ui-1: "del aviso" se leia como solo el simbolo).</summary>
+        public const string Anticipacion = "Anticipación (pitido y símbolo)";
+        /// <summary>Antes "Inicio de la rampa": la palabra "rampa" no se entendia. Internamente sigue siendo avisoRampaS.</summary>
+        public const string Aparicion = "Aparición del símbolo";
+    }
+
     /// <summary>Tamano del overlay: 75 a 150 %, paso 5. Sigue activo con el overlay fijado.</summary>
     public static readonly DeslizadorDef Tamano = new("tamano", "Tamaño", 75, 150, 5, "%", 0,
         c => Math.Round(c.Escala * 100), (c, v) => c.Escala = v / 100);
@@ -61,19 +70,19 @@ public sealed class MenuConfig
         c => Math.Round(c.Opacidad * 100), (c, v) => c.Opacidad = v / 100);
     public static readonly DeslizadorDef TamanoAviso = new("tamanoAviso", "Tamaño del aviso", 50, 300, 10, "%", 0,
         c => Math.Round(c.AvisoEscala * 100), (c, v) => c.AvisoEscala = v / 100);
-    public static readonly DeslizadorDef Anticipacion = new("anticipacion", "Anticipación del aviso", DecisorAviso.AnticipacionMinS,
+    public static readonly DeslizadorDef Anticipacion = new("anticipacion", Etiquetas.Anticipacion, DecisorAviso.AnticipacionMinS,
         DecisorAviso.AnticipacionMaxS, DecisorAviso.AnticipacionPasoS, "s", 1,
         c => c.AvisoAnticipacionS, (c, v) => c.AvisoAnticipacionS = v,
         "Segundos antes del punto de frenado en que suena el pitido y el símbolo llega al 100 %. 0 = justo en el punto.");
     public static readonly DeslizadorDef Duracion = new("duracion", "Duración máxima", AvisoFrenada.DuracionMinimaS, AvisoFrenada.DuracionMaximaS, 0.1, "s", 1,
         c => c.AvisoDuracionS, (c, v) => c.AvisoDuracionS = v);
     /// <summary>
-    /// Inicio de la rampa del simbolo (opcion avanzada, de la fase 5d). El spec de la fase 6 no la dibuja (propone una rampa fija
-    /// de 2,0 s); se conserva configurable (1,0 a 3,0 s, paso 0,5, por defecto 2,0) para no perder una opcion de la bandeja.
+    /// Aparicion del simbolo: cuantos segundos antes empieza a verse, de a poco (<c>avisoRampaS</c>, de la fase 5d). El spec de la fase 6 no la
+    /// dibuja (propone 2,0 s fijos); se conserva configurable (1,0 a 3,0 s, paso 0,5, por defecto 2,0). Ya no se rotula "avanzado".
     /// </summary>
-    public static readonly DeslizadorDef Rampa = new("rampa", "Inicio de la rampa (avanzado)", DecisorAviso.RampaMinS, DecisorAviso.RampaMaxS, 0.5, "s", 1,
+    public static readonly DeslizadorDef Rampa = new("rampa", Etiquetas.Aparicion, DecisorAviso.RampaMinS, DecisorAviso.RampaMaxS, 0.5, "s", 1,
         c => c.AvisoRampaS, (c, v) => c.AvisoRampaS = v,
-        "Desde cuántos segundos antes empieza a verse el símbolo. Por defecto 2,0 s.");
+        "Cuántos segundos antes empieza a verse el símbolo, de a poco. Por defecto 2,0 s.");
 
     public static readonly IReadOnlyList<DeslizadorDef> Deslizadores = [Tamano, Opacidad, TamanoAviso, Anticipacion, Duracion, Rampa];
 

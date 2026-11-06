@@ -13,7 +13,7 @@ namespace AMS2Frenado.App;
 /// <summary>
 /// Overlay: ventana sin bordes, siempre arriba y semitransparente que solo dibuja lo que le dicen el
 /// <see cref="VistaOverlay"/> y el <see cref="CuadroUi"/> del Core (no tiene logica de estados). Fase 6: tarjetas de carbono
-/// con esquina cortada, cabecera ARRIBA (pista, clase, modo, FIJO / LIBRE y la tecla) y barra segmentada. Los botones
+/// con esquina cortada, cabecera ARRIBA (pista, clase y modo) y barra segmentada. Los botones
 /// (modo, engranaje, pin, cerrar) NO estan aca: son la ventana <see cref="VentanaBarra"/>, que se posiciona sobre
 /// <see cref="RectBarra"/>. Bloqueada, esta ventana conserva el click-through de la 5c (WS_EX_TRANSPARENT).
 /// Compila, SIN EJECUTAR: nunca se abrio en Windows.
@@ -64,18 +64,13 @@ public partial class VentanaOverlay : Window
 
     // ---------------------------------------------------------------- bloqueo, escala, posicion
 
-    /// <summary>Fija o libera: estilo click-through de la ventana grande, contorno y agarre, chip LIBRE y la etiqueta FIJO / LIBRE.</summary>
+    /// <summary>Fija o libera: estilo click-through de la ventana grande, contorno discontinuo y agarre (sin rotulos de texto: el estado se ve en el pin).</summary>
     public void AplicarBloqueo(bool bloqueada, BarraBotones barra)
     {
         _bloqueada = bloqueada;
         if (_hwnd != IntPtr.Zero) Win32.AplicarEstiloOverlay(_hwnd, bloqueada);
-        ChipLibre.Visibility = barra.MostrarChipLibre ? Visibility.Visible : Visibility.Collapsed;
-        TxtChipLibre.Text = barra.TextoChipLibre;
         Contorno.Visibility = bloqueada ? Visibility.Collapsed : Visibility.Visible;
         Agarre.Visibility = bloqueada ? Visibility.Collapsed : Visibility.Visible;
-        TxtEstadoPin.Text = barra.EtiquetaPin;
-        TxtEstadoPin.Foreground = Pincel.De(bloqueada ? Paleta.RojoEtiqueta : Paleta.ChipDesbloqueadoTexto);
-        TxtTecla.Text = barra.Atajo;
         _firmaPanel = "";      // fuerza repintar con la opacidad nueva
     }
 

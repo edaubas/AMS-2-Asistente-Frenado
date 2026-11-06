@@ -19,13 +19,11 @@ public enum AccionBarra
 /// <summary>Textos de la barra de botones (UI-SPEC 7.4). Se usan tal cual en la ventana y en las pruebas.</summary>
 public static class TextosBarra
 {
-    public const string EtiquetaFijo = "FIJO", EtiquetaLibre = "LIBRE";
     public const string TooltipAjustes = "Ajustes";
     public const string TooltipCerrar = "Cerrar la aplicación";
     public const string PreguntaCerrar = "¿Cerrar la app?";
     public const string Cerrar = "CERRAR", Cancelar = "CANCELAR";
     public const string AvisoGrabando = "Estás grabando: se corta la grabación.";
-    public const string ChipLibre = "LIBRE · arrastrá para mover · rueda: tamaño";
     public const string AjustesOculto = "Ajustes (el overlay está oculto)";
 
     public static string NombreModo(ModoApp m) => m switch
@@ -45,6 +43,10 @@ public static class TextosBarra
 
     public static string TooltipModo(ModoApp actual) => $"Modo: {NombreModo(actual)} · clic para cambiar";
 
+    /// <summary>
+    /// El estado fijado / libre NO tiene rotulo ni chip en el overlay (correcciones-ui-1): se ve en el icono del pin
+    /// (relleno o contorno, color) y se lee en este tooltip.
+    /// </summary>
     public static string TooltipPin(bool fijado, string atajo) => fijado
         ? $"Fijado: no se puede mover ni cambiar de tamaño. Clic para liberar ({atajo})"
         : $"Libre: arrastrá para mover, rueda para el tamaño. Clic para fijar ({atajo})";
@@ -106,7 +108,6 @@ public sealed class BarraBotones
 
     // ---- lo que se dibuja
 
-    public string EtiquetaPin => Fijado ? TextosBarra.EtiquetaFijo : TextosBarra.EtiquetaLibre;
     public string TooltipPin => TextosBarra.TooltipPin(Fijado, Atajo);
     public string TooltipModo => TextosBarra.TooltipModo(Modo);
     public string TooltipAjustes => Oculto ? TextosBarra.AjustesOculto : TextosBarra.TooltipAjustes;
@@ -114,9 +115,6 @@ public sealed class BarraBotones
     /// <summary>Chincheta vertical y rellena cuando esta fijado; inclinada 45 grados y solo contorno cuando esta libre.</summary>
     public bool PinRelleno => Fijado;
     public double PinAnguloGrados => Fijado ? 0 : 45;
-    /// <summary>Mientras esta libre se muestra el chip de una linea arriba (reemplaza al cartel grande de la 5b).</summary>
-    public bool MostrarChipLibre => !Fijado && !Oculto;
-    public string TextoChipLibre => TextosBarra.ChipLibre;
     /// <summary>Botones visibles, de izquierda a derecha. Oculto: solo el engranaje.</summary>
     public IReadOnlyList<BotonBarra> BotonesVisibles => Oculto
         ? [BotonBarra.Ajustes]

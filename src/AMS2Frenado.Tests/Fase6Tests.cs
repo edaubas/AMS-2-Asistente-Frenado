@@ -9,22 +9,17 @@ namespace AMS2Frenado.Tests;
 public class BarraBotonesTests
 {
     [Fact]
-    public void FijadoYLibreCambianFormaEtiquetaYTooltip()
+    public void FijadoYLibreCambianFormaYTooltipSinRotulosDeTexto()
     {
         var b = new BarraBotones { Atajo = "Ctrl+Alt+L", Fijado = true };
-        Assert.Equal("FIJO", b.EtiquetaPin);
         Assert.True(b.PinRelleno);
         Assert.Equal(0, b.PinAnguloGrados);
-        Assert.False(b.MostrarChipLibre);
         Assert.Equal("Fijado: no se puede mover ni cambiar de tamaño. Clic para liberar (Ctrl+Alt+L)", b.TooltipPin);
 
         Assert.Equal(AccionBarra.AlternarFijado, b.Pulsar(BotonBarra.Fijar, 0));
         Assert.False(b.Fijado);
-        Assert.Equal("LIBRE", b.EtiquetaPin);
         Assert.False(b.PinRelleno);
         Assert.Equal(45, b.PinAnguloGrados);
-        Assert.True(b.MostrarChipLibre);
-        Assert.Equal("LIBRE · arrastrá para mover · rueda: tamaño", b.TextoChipLibre);
         Assert.Equal("Libre: arrastrá para mover, rueda para el tamaño. Clic para fijar (Ctrl+Alt+L)", b.TooltipPin);
 
         Assert.Equal(AccionBarra.AlternarFijado, b.Pulsar(BotonBarra.Fijar, 1));
@@ -138,7 +133,6 @@ public class BarraBotonesTests
         var b = new BarraBotones { Oculto = true };
         Assert.Equal([BotonBarra.Ajustes], b.BotonesVisibles);
         Assert.Equal(32, b.AnchoVentana);
-        Assert.False(b.MostrarChipLibre);
         Assert.Equal(AccionBarra.Ninguna, b.Pulsar(BotonBarra.Cerrar, 0));
         Assert.False(b.ConfirmandoCierre);
         Assert.Equal(AccionBarra.Ninguna, b.Pulsar(BotonBarra.Fijar, 0));
@@ -170,7 +164,36 @@ public class MenuConfigTests
         Assert.Equal("88 %", MenuConfig.Opacidad.LeerTexto(c));
         Assert.Equal("1,5 s", MenuConfig.Duracion.LeerTexto(c));
         Assert.Equal("0,0 s", MenuConfig.Anticipacion.Formatear(0));
-        Assert.Equal("2,0 s", MenuConfig.Rampa.LeerTexto(new ConfigApp()));      // rampa por defecto de la 5d
+        Assert.Equal("2,0 s", MenuConfig.Rampa.LeerTexto(new ConfigApp()));      // aparicion del simbolo por defecto de la 5d
+    }
+
+    [Fact]
+    public void LosTextosDelAvisoNoDicenRampaNiAvanzadoYAclaranQueVaParaPitidoYSimbolo()
+    {
+        Assert.Equal("Anticipación (pitido y símbolo)", MenuConfig.Anticipacion.Etiqueta);
+        Assert.Equal("Segundos antes del punto de frenado en que suena el pitido y el símbolo llega al 100 %. 0 = justo en el punto.", MenuConfig.Anticipacion.Ayuda);
+        Assert.Equal("Aparición del símbolo", MenuConfig.Rampa.Etiqueta);
+        Assert.Equal("Cuántos segundos antes empieza a verse el símbolo, de a poco. Por defecto 2,0 s.", MenuConfig.Rampa.Ayuda);
+        foreach (var d in MenuConfig.Deslizadores)
+        {
+            Assert.DoesNotContain("rampa", d.Etiqueta, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("avanzado", d.Etiqueta, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("rampa", d.Ayuda ?? "", StringComparison.OrdinalIgnoreCase);
+        }
+        // la bandeja usa los mismos textos
+        Assert.Equal(MenuConfig.Anticipacion.Etiqueta, MenuConfig.Etiquetas.Anticipacion);
+        Assert.Equal(MenuConfig.Rampa.Etiqueta, MenuConfig.Etiquetas.Aparicion);
+    }
+
+    [Fact]
+    public void ElEstadoFijadoLibreNoTieneRotuloNiChipDeTexto()
+    {
+        // el estado se ve en el pin y en su tooltip: no quedan constantes ni propiedades de rotulo/chip
+        var miembros = typeof(BarraBotones).GetMembers().Select(m => m.Name).Concat(typeof(TextosBarra).GetMembers().Select(m => m.Name)).ToList();
+        foreach (var nombre in new[] { "EtiquetaPin", "EtiquetaFijo", "EtiquetaLibre", "ChipLibre", "MostrarChipLibre", "TextoChipLibre" })
+            Assert.DoesNotContain(nombre, miembros);
+        var b = new BarraBotones { Atajo = "Ctrl+Alt+L", Fijado = false };
+        Assert.Contains("Ctrl+Alt+L", b.TooltipPin);
     }
 
     [Theory]

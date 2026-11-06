@@ -15,12 +15,9 @@
         </Grid.LayoutTransform>
         <StackPanel>
             <!-- cabecera ARRIBA de la tarjeta (UI-SPEC 7.4): pista y chips, y la fila de la barra. Los botones son OTRA ventana
-                 (VentanaBarra) que se posiciona sobre ReservaBarra; aca solo se reserva el lugar y se dibuja FIJO / LIBRE + la tecla. -->
+                 (VentanaBarra) que se posiciona sobre ReservaBarra; aca solo se reserva el lugar. Sin rotulo de FIJO / LIBRE: el estado se ve en el pin. -->
             <local:PanelCarbono x:Name="TarjetaCabecera" Relleno="12,10,12,10" Margin="0,0,0,8">
                 <StackPanel>
-                    <Border x:Name="ChipLibre" Visibility="Collapsed" Background="#17304D" Padding="8,3" Margin="0,0,0,6" HorizontalAlignment="Left">
-                        <TextBlock x:Name="TxtChipLibre" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="SemiBold" Foreground="#8CC3FF"/>
-                    </Border>
                     <Grid Height="20">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -41,12 +38,6 @@
                         </StackPanel>
                     </Grid>
                     <Grid Height="32">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                            <TextBlock x:Name="TxtEstadoPin" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <Border Background="#2A3139" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock x:Name="TxtTecla" FontFamily="{StaticResource Inter}" FontSize="12" FontWeight="SemiBold" Foreground="#EEF1F4"/>
-                            </Border>
-                        </StackPanel>
                         <Border x:Name="ReservaBarra" Width="140" Height="32" HorizontalAlignment="Right" Background="Transparent" IsHitTestVisible="False"/>
                     </Grid>
                     <TextBlock x:Name="TxtAviso" Margin="0,6,0,0" Visibility="Collapsed" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#FF9C94"/>
