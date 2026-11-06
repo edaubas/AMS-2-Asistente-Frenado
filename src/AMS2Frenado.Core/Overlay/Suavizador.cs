@@ -60,14 +60,14 @@ public sealed class Suavizador
     private VistaPanel RetenerCifras(VistaPanel v, double t)
     {
         string clave = string.Join("|", v.Estado, v.IndiceCurva, v.CurvaTxt, v.TextoFranja, v.NumeroPrincipal, v.NumeroSecundario,
-            v.ColorNumero, v.MostrarRegla, v.EscalaReglaM, string.Join(",", v.EtiquetasPrincipal.Select(e => e.Texto)), v.EtiquetaSecundaria?.Texto);
+            v.ColorNumero, v.MostrarRegla, string.Join(",", v.EtiquetasPrincipal.Select(e => e.Texto)), v.EtiquetaSecundaria?.Texto);
         if (_cifras is null || clave != _claveCifras || t - _tCifras >= TiemposUi.PeriodoCifrasS)
         {
             _cifras = v; _claveCifras = clave; _tCifras = t;
             return v;
         }
         // misma tarjeta, menos de 100 ms desde la ultima cifra: se conservan los numeros que cambian todo el tiempo
-        return v with { Metros = _cifras.Metros, Marcadores = _cifras.Marcadores };
+        return v with { Metros = _cifras.Metros, Marcadores = _cifras.Marcadores, EscalaReglaM = _cifras.EscalaReglaM };
     }
 }
 
