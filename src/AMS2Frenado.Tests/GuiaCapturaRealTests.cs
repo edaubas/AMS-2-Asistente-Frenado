@@ -56,8 +56,13 @@ public sealed class GuiaCapturaRealTests : IDisposable
         var estado = Assert.Single(g.Estados());
         var datos = al.LeerClase(estado.Pista, estado.Variante, estado.Clase)!;
         var mapa = al.LeerMapa(estado.Pista, estado.Variante);
+        // Las ocho zonas de frenada de la pista salen de la IA (muchas vueltas); las demas curvas son "extras"
+        // solo tuyas (sin bloque "ia", ver CapturaRealTests.VerificarCurvas). La guia, si a la curva le falta la
+        // referencia pedida, usa la otra: por eso tambien guia en los extras de frenada. Esos extras son
+        // las curvas de tipo frenada que no son de las 8 zonas.
+        CapturaRealTests.VerificarCurvas(datos, estado.VueltasVos);
         var frenadas = datos.Curvas.Where(c => c.Tipo == "frenada").ToList();
-        Assert.Equal(8, frenadas.Count);
+        Assert.Equal(CapturaRealTests.ZonasFrenada.Length, frenadas.Count(c => c.Ia is not null));
 
         // 2) recorrer la captura por la guia: auto visto (referencia IA y vos) y una IA
         var pasadas = new List<Pasada>
