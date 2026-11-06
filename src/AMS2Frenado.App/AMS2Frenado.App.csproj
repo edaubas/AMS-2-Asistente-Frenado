@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>AMS2Frenado.App</RootNamespace>
+    <AssemblyName>AMS2Frenado</AssemblyName>
+    <!-- con PublishSingleFile, empaqueta tambien las DLL nativas de WPF dentro del .exe -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AMS2Frenado.Core\AMS2Frenado.Core.csproj" />
+  </ItemGroup>
+</Project>
