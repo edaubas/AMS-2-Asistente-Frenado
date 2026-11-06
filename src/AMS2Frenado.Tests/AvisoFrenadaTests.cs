@@ -6,64 +6,78 @@ using Xunit;
 
 namespace AMS2Frenado.Tests;
 
-/// <summary>Logica del aviso de frenada (cuando mostrar y ocultar). La ventana WPF compila pero no se ejecuto.</summary>
+/// <summary>
+/// Presentacion del simbolo de frenada (opacidad y escala a ~60 Hz) y su uso desde el servicio completo.
+/// La decision (rampa, "ya frenando", referencia) esta en <see cref="DecisorAvisoTests"/>.
+/// La ventana WPF compila pero no se ejecuto.
+/// </summary>
 public sealed class AvisoFrenadaTests : IDisposable
 {
     private const double Dt = 1 / 60.0;
     private readonly string _dir = Simulador.CarpetaTemporal();
     public void Dispose() { try { Directory.Delete(_dir, true); } catch { } }
 
-    private static PanelGuia P(EstadoPanel e, int curva = 3) => new() { Estado = e, IndiceCurva = curva, Visible = true };
-
-    /// <summary>Avanza el aviso 'segundos' a 60 Hz con ese panel y freno constantes; devuelve la opacidad final y todas las intermedias.</summary>
-    private static List<double> Tick(AvisoFrenada a, ref double t, PanelGuia? p, double freno, double segundos)
+    private static List<double> Tick(AvisoFrenada a, ref double t, DecisionAviso d, double segundos)
     {
         var res = new List<double>();
         int n = (int)Math.Round(segundos / Dt);
-        for (int i = 0; i < n; i++) { t += Dt; res.Add(a.Actualizar(p, freno, t).Opacidad); }
+        for (int i = 0; i < n; i++) { t += Dt; res.Add(a.Actualizar(d, t).Opacidad); }
         return res;
     }
 
+    private static DecisionAviso Prog(double p, double expira = double.PositiveInfinity) => new(p, false, expira);
+
     [Fact]
-    public void ApareceAlEntrarEnFrenaConFundidoDe80msYNoAntes()
+    public void LaOpacidadSigueLaRampaSinDemoraNiRebotes()
     {
         var a = new AvisoFrenada(); double t = 0;
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Lejos), 0, 1), o => Assert.Equal(0, o));
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Aproximacion), 0, 1), o => Assert.Equal(0, o));
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Inminente), 0, 1), o => Assert.Equal(0, o));
-
-        var f = Tick(a, ref t, P(EstadoPanel.Frena), 0, 0.2);
-        Assert.InRange(f[0], 0.05, 0.4);                         // primer tick: ya empieza a aparecer
-        Assert.Equal(1, f[5], 6);                                // a los 6 ticks (100 ms) ya esta completo
-        // el fundido sube sin retrocesos (nada de parpadeo)
-        for (int i = 1; i < f.Count; i++) Assert.True(f[i] >= f[i - 1] - 1e-12);
-        Assert.True(f.TakeWhile(o => o < 1).Count() <= 5);       // 80 ms = 4,8 ticks a 60 Hz
+        // rampa de 2 s a 60 Hz alimentada a 27 Hz: la opacidad es el progreso (la subida no la frena)
+        double ult = 0; int maxRetraso = 0;
+        for (int i = 0; i <= 120; i++)
+        {
+            t += Dt;
+            double p = i / 120.0;
+            double o = a.Actualizar(Prog(p), t).Opacidad;
+            Assert.True(o >= ult - 1e-12);
+            Assert.InRange(p - o, -1e-9, 0.2);
+            if (p - o > 0.02) maxRetraso++;
+            ult = o;
+        }
+        Assert.Equal(1, ult, 9);
+        Assert.Equal(0, maxRetraso);
     }
 
     [Fact]
-    public void DesapareceCuandoElUsuarioFrenaPorEncimaDelUmbral()
+    public void ArrancaEn0EnLaPrimeraVezQueSeVeYLlegaA1EnElPunto()
     {
         var a = new AvisoFrenada(); double t = 0;
-        Tick(a, ref t, P(EstadoPanel.Frena), 0, 0.3);
-        // justo en el umbral no cuenta como frenar
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Frena), 0.15, 0.1), o => Assert.Equal(1, o));
-        var f = Tick(a, ref t, P(EstadoPanel.Frena), 0.16, 0.2);
+        Assert.All(Tick(a, ref t, Prog(0), 1), o => Assert.Equal(0, o));
+        var f = Tick(a, ref t, Prog(1), 0.2);
+        // un salto (hueco de datos) se suaviza en 80 ms pero a los 100 ms ya esta completo
+        Assert.InRange(f[0], 0.05, 0.4);
+        Assert.Equal(1, f[5], 6);
+    }
+
+    [Fact]
+    public void AlDesaparecerHaceUnFundidoCortoDe80msSinRebotes()
+    {
+        var a = new AvisoFrenada(); double t = 0;
+        Tick(a, ref t, Prog(1), 0.3);
+        var f = Tick(a, ref t, Prog(0), 0.2);
         Assert.Equal(0, f[^1]);
-        for (int i = 1; i < f.Count; i++) Assert.True(f[i] <= f[i - 1] + 1e-12);   // fundido de salida sin rebotes
-        Assert.True(f.TakeWhile(o => o > 0).Count() <= 5);                          // 80 ms
-        // y no vuelve a aparecer en esa curva aunque suelte el freno
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Frena), 0, 1), o => Assert.Equal(0, o));
+        for (int i = 1; i < f.Count; i++) Assert.True(f[i] <= f[i - 1] + 1e-12);
+        Assert.True(f.TakeWhile(o => o > 0).Count() <= 5);          // 80 ms = 4,8 ticks a 60 Hz
     }
 
     [Fact]
-    public void SiNoFrenaDesapareceALos1_5sPorDefecto()
+    public void SeApagaSoloCuandoPasaElInstanteDeExpiracionAunqueNoLleguenMuestras()
     {
         var a = new AvisoFrenada(); double t = 0;
-        var f = Tick(a, ref t, P(EstadoPanel.Frena), 0, 2.0);
-        Assert.Equal(1, f[(int)(1.4 / Dt)], 6);                  // a 1,4 s sigue
-        Assert.Equal(0, f[^1]);                                  // a 2,0 s ya se fue
-        Assert.True(f.Count(o => o > 0) * Dt is > 1.5 and < 1.75);
-        Assert.Equal(1.5, AvisoFrenada.DuracionPorDefectoS);
+        var d = Prog(1, expira: 1.5);
+        var f = Tick(a, ref t, d, 2.0);
+        Assert.Equal(1, f[(int)(1.4 / Dt)], 6);
+        Assert.Equal(0, f[^1]);
+        Assert.InRange(f.Count(o => o > 0) * Dt, 1.5, 1.7);
     }
 
     [Fact]
@@ -75,82 +89,27 @@ public sealed class AvisoFrenadaTests : IDisposable
         a.DuracionS = double.NaN; Assert.Equal(1.5, a.DuracionS);
         a.DuracionS = 1.2; Assert.Equal(1.2, a.DuracionS);
         Assert.Equal(1.0, AvisoFrenada.LimitarDuracion(-4));
-
-        double t = 0;
-        a.DuracionS = 2.0;
-        var f = Tick(a, ref t, P(EstadoPanel.Frena), 0, 2.4);
-        Assert.Equal(1, f[(int)(1.9 / Dt)], 6);
-        Assert.Equal(0, f[^1]);
+        Assert.Equal(1.5, AvisoFrenada.DuracionPorDefectoS);
     }
 
     [Fact]
-    public void DesapareceAlPasarElVerticeAunqueNoHayaPasadoElTiempo()
-    {
-        var a = new AvisoFrenada(); double t = 0;
-        Tick(a, ref t, P(EstadoPanel.Frena), 0, 0.3);
-        // la guia cambia de curva (paso el vertice)
-        var f = Tick(a, ref t, P(EstadoPanel.Lejos, curva: 4), 0, 0.2);
-        Assert.Equal(0, f[^1]);
-        Assert.True(f.TakeWhile(o => o > 0).Count() <= 5);
-        // o sin lectura valida
-        double t2 = 0; var b = new AvisoFrenada();
-        Tick(b, ref t2, P(EstadoPanel.Frena), 0, 0.3);
-        Assert.Equal(0, Tick(b, ref t2, null, 0, 0.2)[^1]);
-    }
-
-    [Fact]
-    public void NoVuelveAAparecerEnLaMismaCurvaEnLaMismaPasada()
-    {
-        var a = new AvisoFrenada(); double t = 0;
-        Tick(a, ref t, P(EstadoPanel.Frena), 0, 2.0);                    // aparece y se va por tiempo
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Frena), 0, 1), o => Assert.Equal(0, o));
-
-        // retroceso de estado (la guia baja a Inminente y vuelve a FRENA) en la misma curva: tampoco
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Inminente), 0, 1), o => Assert.Equal(0, o));
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Frena), 0, 1), o => Assert.Equal(0, o));
-
-        // en la vuelta siguiente (pasa por Lejos) vuelve a avisar
-        Tick(a, ref t, P(EstadoPanel.Lejos), 0, 1);
-        Assert.Equal(1, Tick(a, ref t, P(EstadoPanel.Frena), 0, 0.3)[^1], 6);
-    }
-
-    [Fact]
-    public void UnaChicaneAvisaCadaCurvaPorSeparado()
-    {
-        var a = new AvisoFrenada(); double t = 0;
-        Assert.Equal(1, Tick(a, ref t, P(EstadoPanel.Frena, 3), 0, 0.3)[^1], 6);
-        Tick(a, ref t, P(EstadoPanel.Frena, 3), 0.8, 0.3);               // frena: se oculta
-        Assert.Equal(0, Tick(a, ref t, P(EstadoPanel.Frena, 3), 0.8, 0.3)[^1]);
-        // curva siguiente directo en FRENA (sin pasar por Lejos)
-        Assert.Equal(1, Tick(a, ref t, P(EstadoPanel.Frena, 4), 0, 0.3)[^1], 6);
-    }
-
-    [Fact]
-    public void SiYaVeniasFrenandoAlLlegarNoAparece()
-    {
-        var a = new AvisoFrenada(); double t = 0;
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Frena), 0.7, 1), o => Assert.Equal(0, o));
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Frena), 0, 1), o => Assert.Equal(0, o));      // y soltar no lo dispara
-    }
-
-    [Fact]
-    public void ToqueYLevantaNuncaAvisan()
-    {
-        var a = new AvisoFrenada(); double t = 0;
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Toque), 0, 1), o => Assert.Equal(0, o));
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Levanta), 0, 1), o => Assert.Equal(0, o));
-    }
-
-    [Fact]
-    public void DesactivadoNoAvisaYApagarloMientrasSeVeLoOculta()
+    public void DesactivadoNoMuestraYApagarloMientrasSeVeLoOculta()
     {
         var a = new AvisoFrenada { Habilitado = false }; double t = 0;
-        Assert.All(Tick(a, ref t, P(EstadoPanel.Frena), 0, 1), o => Assert.Equal(0, o));
-
+        Assert.All(Tick(a, ref t, Prog(1), 1), o => Assert.Equal(0, o));
         var b = new AvisoFrenada(); double t2 = 0;
-        Tick(b, ref t2, P(EstadoPanel.Frena, 8), 0, 0.3);
+        Tick(b, ref t2, Prog(1), 0.3);
         b.Habilitado = false;
-        Assert.Equal(0, Tick(b, ref t2, P(EstadoPanel.Frena, 8), 0, 0.2)[^1]);
+        Assert.Equal(0, Tick(b, ref t2, Prog(1), 0.2)[^1]);
+    }
+
+    [Fact]
+    public void LaEscalaAcompanaLaOpacidadDe085A1()
+    {
+        Assert.Equal(0.85, new CuadroAviso(0).Escala, 9);
+        Assert.Equal(1.0, new CuadroAviso(1).Escala, 9);
+        Assert.Equal(0.925, new CuadroAviso(0.5).Escala, 9);
+        Assert.Equal(1.0, new CuadroAviso(7).Escala, 9);
     }
 
     [Fact]
@@ -158,25 +117,18 @@ public sealed class AvisoFrenadaTests : IDisposable
     {
         var a = new AvisoFrenada { Habilitado = false }; double t = 100;
         a.Probar(t);
-        var f = Tick(a, ref t, null, 0, 2.0);
+        var f = Tick(a, ref t, DecisionAviso.Nada, 2.0);
         Assert.Equal(1, f[10], 6);
         Assert.Equal(0, f[^1]);
         Assert.InRange(f.Count(o => o > 0) * Dt, 1.4, 1.75);
     }
 
     [Fact]
-    public void ElFrenoNoValidoSeTomaComoQueNoFrena()
-    {
-        var a = new AvisoFrenada(); double t = 0;
-        Assert.Equal(1, Tick(a, ref t, P(EstadoPanel.Frena), double.NaN, 0.3)[^1], 6);
-    }
-
-    [Fact]
     public void UnaPausaLargaDeRelojNoSaltaElFundido()
     {
         var a = new AvisoFrenada();
-        a.Actualizar(P(EstadoPanel.Lejos), 0, 0);
-        var c = a.Actualizar(P(EstadoPanel.Frena), 0, 10);              // 10 s despues: dt acotado, no aparece de golpe
+        a.Actualizar(Prog(0), 0);
+        var c = a.Actualizar(Prog(1), 10);                          // 10 s despues: dt acotado, no aparece de golpe
         Assert.True(c.Opacidad < 1);
     }
 
@@ -185,21 +137,22 @@ public sealed class AvisoFrenadaTests : IDisposable
     private static ResultadoLectura Ok(in SharedMemory sm) => new(EstadoLectura.Ok, ConstantesShm.Version, sm);
 
     [Fact]
-    public void ConElSimuladorAvisaUnaVezPorTramoDeFrenaYNuncaMientrasFrenas()
+    public void ConElSimuladorElSimboloLlegaAlCienPorCientoEnElPuntoYPitaUnaVezPorTramo()
     {
         var sim = new Simulador(ias: 3);
         var s = new ServicioOverlay(new Almacen(_dir)) { Modo = ModoApp.Grabar };
         for (int i = 0; i < 200_000 && sim.Autos[0].Vueltas < 9; i++) s.Paso(Ok(sim.Paso()), sim.Tiempo);
         s.Modo = ModoApp.Mostrar;
+        s.Pitido = true;
 
-        // El pedal del simulador ya esta apretado al llegar al punto de la guia (la guia usa la mediana IA/vos),
-        // asi que se reemplaza por un "conductor" que reacciona 0,4 s despues de que aparece FRENA en las curvas
-        // pares y nunca reacciona en las impares (el aviso se va solo por tiempo).
+        // El pedal del simulador ya esta apretado al llegar al punto de la guia (la guia usa la mediana IA/vos), asi que se
+        // reemplaza por un "conductor" que reacciona 0,4 s despues de que aparece FRENA en las curvas pares y nunca
+        // reacciona en las impares (el simbolo se va solo por tiempo).
         double off = 1000, tCuadro = off;
-        int avisos = 0, tramos = 0, impares = 0, pares = 0;
-        bool enFrenaPrev = false; int curvaPrev = -1; double tFrena = 0;
-        bool visiblePrev = false; double inicio = 0, maxVisible = 0, frenoAltoDesde = double.NaN;
-        double durMaxImpar = 0, durMaxPar = 0; bool tramoImpar = false;
+        int tramos = 0, pitidos = 0;
+        bool enFrenaPrev = false; int curvaPrev = -1; double tFrena = 0; bool tramoImpar = false;
+        double opMax = 0, frenoAltoDesde = double.NaN;
+        var llegadas = new List<double>();
         uint objetivo = sim.Autos[0].Vueltas + 4;
         for (int i = 0; i < 400_000 && sim.Autos[0].Vueltas < objetivo; i++)
         {
@@ -207,32 +160,29 @@ public sealed class AvisoFrenadaTests : IDisposable
             double t = off + sim.Tiempo;
             sm.mBrake = enFrenaPrev && !tramoImpar && t - tFrena >= 0.4 ? 0.8f : 0f;
             var v = s.Paso(Ok(sm), t);
-            // la ventana se actualiza a 60 Hz aunque la telemetria llegue a 30 Hz
-            for (; tCuadro <= t; tCuadro += Dt)
-            {
-                bool vis = s.ActualizarAviso(tCuadro).Visible;
-                if (vis && !visiblePrev) { avisos++; inicio = tCuadro; }
-                if (vis) { maxVisible = Math.Max(maxVisible, tCuadro - inicio); if (tramoImpar) durMaxImpar = Math.Max(durMaxImpar, tCuadro - inicio); else durMaxPar = Math.Max(durMaxPar, tCuadro - inicio); }
-                visiblePrev = vis;
-                // con el pedal apretado mas de 0,15 s (muestra + fundido de 80 ms) el aviso ya no se ve
-                if (sm.mBrake > 0.15f) { if (double.IsNaN(frenoAltoDesde)) frenoAltoDesde = tCuadro; } else frenoAltoDesde = double.NaN;
-                if (!double.IsNaN(frenoAltoDesde) && tCuadro - frenoAltoDesde > 0.15) Assert.False(vis, "se vio el aviso con el freno apretado");
-            }
+            if (v.Pitar) { pitidos++; Assert.True(v.Freno <= 0.15, "pito con el pedal apretado"); }
             bool frena = v.Guia is { Estado: EstadoPanel.Frena };
             int curva = frena ? v.Guia!.IndiceCurva : -1;
-            if (frena && (!enFrenaPrev || curva != curvaPrev))
+            bool llega = frena && (!enFrenaPrev || curva != curvaPrev);
+            if (llega) { tramos++; tFrena = t; tramoImpar = tramos % 2 == 1; }
+            // la ventana se actualiza a 60 Hz aunque la telemetria llegue a 30 Hz
+            bool primero = true;
+            for (; tCuadro <= t; tCuadro += Dt)
             {
-                tramos++; tFrena = t; tramoImpar = tramos % 2 == 1;
-                if (tramoImpar) impares++; else pares++;
+                var c = s.ActualizarAviso(tCuadro);
+                opMax = Math.Max(opMax, c.Opacidad);
+                if (llega && primero) llegadas.Add(c.Opacidad);      // el primer cuadro de la ventana tras llegar al punto
+                primero = false;
+                if (sm.mBrake > 0.15f) { if (double.IsNaN(frenoAltoDesde)) frenoAltoDesde = tCuadro; } else frenoAltoDesde = double.NaN;
+                if (!double.IsNaN(frenoAltoDesde) && tCuadro - frenoAltoDesde > 0.15) Assert.False(c.Visible, "se vio el aviso con el freno apretado");
             }
             enFrenaPrev = frena; curvaPrev = curva;
         }
         Assert.True(tramos >= 6, $"{tramos} tramos");
-        Assert.Equal(tramos, avisos);                       // exactamente un aviso por tramo de FRENA: ni falta ni se repite
-        Assert.True(maxVisible <= 1.5 + AvisoFrenada.FundidoS + 0.1, $"se vio {maxVisible:0.00} s");
-        Assert.InRange(durMaxPar, 0.3, 0.8);                // el conductor reacciona a los 0,4 s
-        Assert.InRange(durMaxImpar, 1.4, 1.7);              // el que no reacciona: ~1,5 s
-        Assert.True(impares > 0 && pares > 0);
+        Assert.Equal(tramos, pitidos);                                    // un pitido por tramo de FRENA
+        Assert.Equal(tramos, llegadas.Count);
+        Assert.All(llegadas, o => Assert.True(o >= 0.97, $"el simbolo tenia {o:0.00} al llegar al punto"));    // no llega tarde
+        Assert.Equal(1, opMax, 6);
     }
 
     [Fact]
@@ -241,6 +191,9 @@ public sealed class AvisoFrenadaTests : IDisposable
         var s = new ServicioOverlay(new Almacen(_dir));
         s.AvisoDuracionS = 7;
         Assert.Equal(2.0, s.AvisoDuracionS);
+        s.AvisoRampaS = 9;
+        Assert.Equal(3.0, s.AvisoRampaS);
+        s.AvisoRampaS = 2;
         s.AvisoActivo = false;
         Assert.False(s.AvisoActivo);
         var sim = new Simulador();

@@ -108,20 +108,4 @@ public sealed class OverlaySuavizadorTests
         Assert.Equal(1, c.OpacidadTarjeta);
         Assert.Equal(TipoTarjeta.SinDatos, c.Panel.Tipo);
     }
-
-    [Fact]
-    public void ElPitidoSuenaUnaVezPorCurvaYSoloSiEstaHabilitado()
-    {
-        var g = new GestorPitido { Habilitado = true };
-        PanelGuia P(EstadoPanel e, int i) => new() { Estado = e, IndiceCurva = i };
-        Assert.False(g.Debe(P(EstadoPanel.Inminente, 1)));
-        Assert.True(g.Debe(P(EstadoPanel.Frena, 1)));
-        Assert.False(g.Debe(P(EstadoPanel.Frena, 1)));
-        Assert.False(g.Debe(P(EstadoPanel.Frena, 1)));
-        Assert.False(g.Debe(P(EstadoPanel.Lejos, 2)));
-        Assert.True(g.Debe(P(EstadoPanel.Frena, 2)));
-        g.Habilitado = false;
-        Assert.False(g.Debe(P(EstadoPanel.Lejos, 3)));
-        Assert.False(g.Debe(P(EstadoPanel.Frena, 3)));
-    }
 }

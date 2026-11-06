@@ -70,22 +70,3 @@ public sealed class Suavizador
         return v with { Metros = _cifras.Metros, Marcadores = _cifras.Marcadores, EscalaReglaM = _cifras.EscalaReglaM };
     }
 }
-
-/// <summary>Pitido opcional: una sola vez al entrar en FRENA en cada curva. Lo reproduce la App.</summary>
-public sealed class GestorPitido
-{
-    private EstadoPanel _prev = EstadoPanel.SinDatos;
-    private int _curvaPitada = -1;
-
-    public bool Habilitado { get; set; }
-
-    /// <summary>Verdadero cuando hay que pitar con este panel.</summary>
-    public bool Debe(PanelGuia p)
-    {
-        bool entra = p.Estado == EstadoPanel.Frena && _prev != EstadoPanel.Frena && p.IndiceCurva != _curvaPitada;
-        if (p.Estado == EstadoPanel.Frena) _curvaPitada = p.IndiceCurva;
-        else if (p.Estado is EstadoPanel.Lejos or EstadoPanel.SinDatos) _curvaPitada = -1;
-        _prev = p.Estado;
-        return Habilitado && entra;
-    }
-}
