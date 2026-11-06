@@ -155,29 +155,15 @@ Valida que el overlay se lea de un vistazo mientras se maneja, sin tapar el jueg
 - Medidas finales para el desarrollador: tamaños de fuente, márgenes y colores.
 - Una lista de problemas, cada uno con prioridad (bloquea, importante, menor).
 
-## Agente 3 – Simracer que valida
+## Validación en pista
 
-Valida en pista que la app sirve para lo que se pensó: recordar dónde frenar en un circuito nuevo o que hace tiempo no se corre. No busca la frenada perfecta.
+El rol "Agente 3" (simracer que valida) se quitó: no se usa como agente. La validación en pista la hace el usuario directamente, probando el `.exe` con AMS2 y pasando el feedback.
 
-**Plan de prueba:**
+Valores que siguen a calibrar con esa prueba:
 
-1. **Tres pistas de carácter distinto:** una que conozcas bien (para juzgar si los puntos tienen sentido), una técnica y lenta, y una rápida tipo Silverstone.
-2. **Dos clases:** un GT3 y un fórmula. Si se puede, una carrera multiclase para ver que cada clase se graba por separado.
-3. **Grabar:**
-    - Práctica con IA, unas 10 vueltas propias.
-    - Revisar en el panel "GRABANDO" que suben los contadores de IA, tuyos y del mapa.
-4. **Mostrar:** una qualy y una carrera corta usando solo la guía.
-5. **Repetir al día siguiente** en una de las pistas, para ver si ayuda a recordar.
-
-**Qué juzga, curva por curva:**
-
-- ¿El punto de la IA y el tuyo son razonables, o alguno está claramente corrido?
-- ¿Los 5 segundos de aviso alcanzan, o el panel aparece tarde o demasiado temprano?
-- ¿Las curvas rápidas salen como TOQUE o LEVANTÁ cuando corresponde? ¿Falta alguna o sobra alguna?
-- ¿El overlay distrae en carrera, con tráfico cerca?
-- ¿El mapa propio se parece a la pista y ayuda a ubicarse?
-
-**Qué entrega:** una tabla por pista y clase, con estas columnas: curva, tipo esperado, tipo mostrado, punto IA (bien, temprano o tarde), punto propio (igual) y comentario. Más una lista de los valores a calibrar: los 5 s, los umbrales de toque y levantar, y el mínimo y el máximo de aviso.
+- Los 5 s de aviso, el piso de 120 m y el tope de 400 m de la ventana por tiempo.
+- Los umbrales de toque y levantá.
+- El umbral de freno (0,15) y la anticipación del pitido y del símbolo.
 
 ## Riesgos, supuestos y preguntas abiertas
 
