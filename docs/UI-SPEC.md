@@ -44,6 +44,10 @@ Agente 2, primera participación (sobre el lienzo). Rama `fase-5-ui-spec`. Solo 
 > | 4 | **Pitido y símbolo siguen solo a la referencia principal elegida.** Si la curva no tiene bloque de esa referencia, no hay ni pitido ni símbolo en esa curva. | 2.1 |
 > | 5 | **Tercer modo "Grabar solo vos"**: la IA no se vuelve a grabar; chip "GRABANDO · SOLO VOS". | 2 (GRABANDO), 3.4 |
 
+> ## Fase 6: rediseño del overlay y menú integrado (propuesta; ver sección 7)
+>
+> Estética de carbono con esquina cortada, barra de botones (modo, engranaje, fijar, cerrar), menú de configuración dentro del overlay y "Anticipación del aviso". **Si algo de las secciones 1 a 6 contradice la sección 7 (colores, bloqueo, bandeja, chips de 11 px, cabecera), manda la sección 7 cuando el usuario la apruebe.** Pantallas: `docs/ui/pantallas-fase6.html` y `.png`. Script de contraste: `docs/ui/contraste_fase6.py`.
+
 ---
 
 ## 1. Checklist del handover
@@ -468,3 +472,311 @@ Material necesario: capturas de pantalla con AMS2 en Borderless, HUD completo ac
 - **Ventana.dc.html:** no recibido, por lo que bloqueo y bandeja se especifican sin dibujo de referencia.
 - **Atajo `Ctrl+Alt+L`:** propuesta. No se comprobó si choca con Moza o con AMS2.
 - **Alto del overlay:** medido en la ilustración HTML, no en WPF.
+
+---
+
+## 7. Fase 6 – Rediseño
+
+Agente 2. Rama `fase-6-ui-spec`. Solo docs: no se tocó `src/`. Pantallas: [`docs/ui/pantallas-fase6.html`](ui/pantallas-fase6.html) (fuente) y [`.png`](ui/pantallas-fase6.png). Contraste: `python3 docs/ui/contraste_fase6.py`.
+
+**Etiquetas.** **[Evidencia]** = calculado con el script o leído del código. **[Criterio]** = decisión de diseño. **[Supuesto]** = ver 7.12. Todo lo que dependa del juego o de Windows en ejecución: **sin verificar en AMS2** (el .exe de fases previas tampoco se ejecutó en este entorno).
+
+**Material de estética.** Capturas locales del usuario, solo para mirar. Se tomó el estilo (carbono, esquina cortada, acento rojo, títulos en mayúsculas condensadas, cifras con ":", indicadores segmentados). No se copió ninguna imagen, logo ni nombre; la textura y los íconos son vectores propios.
+
+### 7.1 Qué cambia, por pedido
+
+| Pedido | Resolución | Dónde |
+|---|---|---|
+| A. Estética | Tarjetas carbono con corte de 14 px, acento rojo chico, barra segmentada, cifras con ":" en GRABANDO | 7.2, 7.3 |
+| B. Engranaje y menú | Ventana de menú de 624 px, dos columnas, interruptores, deslizadores, páginas internas | 7.5 |
+| C. Fijar | Botón pin con dos estados; "fijado" = no mover ni cambiar tamaño; engranaje y pin siempre activos | 7.4 |
+| D. ✕ y modo | ✕ con doble paso en el lugar; modo abre popover de 3 opciones (no cicla) | 7.4 |
+| E. Anticipación | Deslizador 0 a 2,0 s, paso 0,1, defecto 0 | 7.6 |
+
+### 7.2 Tokens, tipografía y medidas
+
+**Colores [Criterio, contraste en 7.8]**
+
+| Token | Hex | Uso |
+|---|---|---|
+| `base` | `#0C0E11` | Fondo del panel (con alfa 0,85 a 0,95) |
+| `menu` / `sup` | `#0F1216` / `#161A1F` | Fondo opaco del menú / tarjetas y botones |
+| `sup-h` / `sup-p` | `#222831` / `#2F3842` | Hover / presionado |
+| `borde` / `borde-f` | `#2E3640` / `#5A6673` | Borde de tarjeta / de botón |
+| `pista` | `#66727F` | Pista de deslizador |
+| `rojo` | `#C62F26` | Franja FRENÁ, acento de 3 px, interruptor ON, botón CERRAR |
+| `rojo-et` | `#FF8A80` | Texto de etiquetas rojas chicas y pin fijado |
+| `aviso` | `#E53935` | Símbolo de aviso (sin cambios, contorno `#0C0E11`) |
+| `ia` / `vos` / `ambar` | `#FF9A3D` / `#5AA9FF` / `#FFC24D` | Sin cambios |
+| `neutra` | `#3B4652` | Franja TOQUE / LEVANTÁ |
+| `t1` `tit` `t2` `t3` `sd` | `#FFFFFF` `#EEF1F4` `#DDE2E7` `#A9B2BC` `#C3CAD1` | Texto (sin cambios) |
+
+**Tipografía.** Solo las fuentes ya embebidas. "Ancho" de los títulos: se aproxima con espaciado, sin sumar fuentes.
+
+| Elemento | Fuente | Tamaño / peso | Nota |
+|---|---|---|---|
+| FRENÁ, TOQUE, LEVANTÁ, SIN DATOS | Barlow Condensed | 30 / 700, espaciado 0,06 em, mayúsculas | Antes 0,04 em |
+| CURVA N, título del menú, "Datos" | Barlow Condensed | 22 / 700, espaciado 0,06 a 0,08 em, mayúsculas | Con acento rojo de 28 × 3 debajo |
+| Cifra de TOQUE / LEVANTÁ | Barlow Condensed | 64 / 700 | Sin cambios |
+| Cifras de GRABANDO | Barlow Condensed | 44 / 600, separadas por ":" | Antes 26 |
+| Valor del deslizador | Barlow Condensed | 18 / 600 | Coma decimal ("0,8 s") |
+| Cuenta de metros | Barlow Condensed | 14 / 600 | Sin cambios |
+| Etiqueta de sección, etiqueta roja | Inter | 12 / 700, 0,12 em, mayúsculas | `rojo-et` |
+| Fila del menú | Inter | 14 / 600 | `tit` |
+| Ayuda | Inter | 12 / 400 | `t3`, máx. 3 líneas |
+| Chips, teclas, botones de texto | Inter | **12** / 600 a 700 | Antes 11: ahora 12 px es el mínimo en todo |
+
+**Medidas** (px = DIP, a escala 100 %)
+
+| Medida | Valor |
+|---|---|
+| Ancho de tarjeta | 320 (240 a 480 con la escala) |
+| Esquina cortada | **14 × 14 a 45°, abajo a la derecha** (16 en el menú). Sin radios redondeados |
+| Franja de estado | 40 de alto, rectangular |
+| Relleno de tarjeta | 12 arriba, 14 a los lados, **18 abajo** (el corte no pisa texto) |
+| Cabecera + barra | 320 × ≈ 72 (fila de pista 20 + barra 32 + márgenes). Va **arriba** de la tarjeta |
+| Separación entre tarjetas | 8 |
+| Barra segmentada | 16 segmentos de 10 de alto, separación 3; marcadores de 14 × 12 con tallo de 8; alto total 32 |
+| Botón | **28 × 28 visibles, 32 × 32 clicables**; ícono de 16 |
+| Interruptor | 44 × 24; perilla de 18 con tilde |
+| Deslizador | pista de 4; perilla de 8 × 20; zona de arrastre de 28 de alto |
+| Segmentado | alto 36, separación 2 |
+| Menú | 624 de ancho (dos columnas de 288, separación 16, relleno 16), ≈ 540 de alto |
+| Alto del conjunto en Aproximación | ≈ 290 (antes ≈ 210 + cabecera de ≈ 36) [estimado, no medido en WPF] |
+
+**Textura "carbono" barata [Criterio].** Un `DrawingBrush` congelado y compartido, `TileMode=Tile`, `ViewportUnits=Absolute`, tile de **6 × 6 DIP**: una diagonal de 1 px blanca al **4 %** (`M0,6 L6,0 M-1,1 L1,-1 M5,7 L7,5`, trazo 1) más dos puntas para que cierre sin costura. Sin imágenes. Se aplica como segunda capa sobre el relleno de `base`, y las dos capas llevan `Opacity` = alfa del fondo: **la opacidad es solo del fondo y el texto queda al 100 %**.
+
+### 7.3 Estados del panel
+
+Los estados son los de siempre (ver 2 y 5c); cambia el dibujo, no la lógica. Ver `pantallas-fase6.png`, secciones 1 y 1b.
+
+| Estado | Cambio visual |
+|---|---|
+| Lejos | "PRÓXIMA" como etiqueta de 12 px; "CURVA 7 · 640 m" igual |
+| Aproximación / Inminente | Título con acento rojo; **barra segmentada**: segmento 0 blanco = ahora, segmentos hasta el punto de frenado en gris `#7C8794`, el resto vacío `#232A31`, marca roja en el extremo; rombo = IA y círculo = vos como cabezas de 14 px con tallo. Metros chicos abajo (ámbar en Inminente) |
+| FRENÁ | Franja roja de 40 px, cuerpo oscuro con leyenda y velocidades. Es la **única superficie roja grande** (≈ 16 % del conjunto: 320 × 40 sobre 320 × 250) |
+| TOQUE / LEVANTÁ | Franja neutra, cifra de 64 px |
+| SIN DATOS | Mismas 5 causas de la 5c, más "Esperando AMS2" y "Versión no compatible". Los textos que decían "Bandeja ›" ahora dicen "botón ⇄ ›" o "⚙ ›" (ver P26) |
+| GRABANDO / SOLO VOS | Cifras de 44 px separadas por ":" con etiqueta roja ("IA · vueltas", "VOS · válidas"). Pie: "Parar de grabar: ⇄ › Mostrar." |
+
+### 7.4 Barra de botones (pedidos C y D)
+
+Orden, de izquierda a derecha: **⇄ modo**, **⚙ ajustes**, **📌 fijar**, separador, **✕ cerrar**. A la izquierda de la fila, la etiqueta **FIJO / LIBRE** y la tecla **Ctrl+Alt+L** (siempre visible; muestra el atajo configurado real).
+
+| Botón | Reposo | Acción | Tooltip |
+|---|---|---|---|
+| ⇄ Modo | Sin borde, ícono `t3` (discreto) | Abre un popover con Grabar todo / Grabar solo vos / Mostrar; marca el actual. **No cicla** | "Modo: Mostrar · clic para cambiar" |
+| ⚙ Ajustes | Borde `borde-f`, fondo `sup` | Abre o cierra el menú (alterna) | "Ajustes" |
+| 📌 Fijar | Ver abajo | Fija o libera | Ver abajo |
+| ✕ Cerrar | Sin borde, ícono `t3`; en hover fondo `rojo` | Doble paso (abajo) | "Cerrar la aplicación" |
+
+**Pin [Criterio]**
+
+| Estado | Ícono | Fondo / borde | Etiqueta | Tooltip |
+|---|---|---|---|---|
+| Fijado | Chincheta **vertical, rellena** | `#3A1614` / `rojo`, ícono `rojo-et` | FIJO | "Fijado: no se puede mover ni cambiar de tamaño. Clic para liberar (Ctrl+Alt+L)" |
+| Libre | Chincheta **inclinada 45°, solo contorno** | `sup` / `borde-f` | LIBRE (azul) | "Libre: arrastrá para mover, rueda para el tamaño. Clic para fijar (Ctrl+Alt+L)" |
+
+La forma (relleno y ángulo) y la palabra FIJO / LIBRE llevan el estado; el color solo acompaña. En Libre se mantienen el contorno azul discontinuo y el agarre de tamaño, y el cartel grande de la fase 5b se reemplaza por un chip de una línea arriba: "LIBRE · arrastrá para mover · rueda: tamaño". Mientras está libre el fondo va al 100 %, como antes.
+
+**Qué significa "fijado" [Evidencia, decisión del usuario].** Solo que no se puede mover ni cambiar de tamaño con mouse, rueda o agarre. El engranaje, el pin, el modo y la ✕ funcionan siempre. El resto del overlay deja pasar los clics al juego.
+
+**Área clicable [Criterio].** Cada botón dibuja 28 × 28 y responde en 32 × 32. Razones: se usa con el mouse en pausa o menús, con apuntado impreciso; 32 es del orden de los botones de la barra de título de Windows y supera el mínimo de 24 × 24 de WCAG 2.2 (criterio 2.5.8, de memoria, no se recalculó). Con escala del overlay menor a 0,875 los botones caerían bajo 28 px reales: se les aplica una **escala inversa** (0,875 ÷ escala) para mantener 28 px como mínimo. El separador de 9 px aísla la ✕.
+
+**No estorban la lectura [Criterio].** La barra está **arriba** y el número (cifra de TOQUE, marcadores, barra) está debajo. Los botones sin borde en reposo (⇄ y ✕) reducen el ruido.
+
+**✕ con doble paso [Criterio].** Un clic reemplaza la fila de botones, en el mismo lugar, por "¿Cerrar la app?" con **CERRAR** (rojo) a la izquierda y **CANCELAR** justo donde estaba la ✕, de modo que un doble clic accidental cancela. Se cancela solo a los 5 s (barra fina que se consume) y con Esc si hay foco. Si está grabando, agrega "Estás grabando: se corta la grabación." "Salir" del menú usa el mismo doble paso en su pie. La ✕ cierra la **aplicación** (igual que "Salir"); ocultar solo el overlay está en ⚙.
+
+### 7.5 Menú de configuración (pedido B)
+
+Se abre con el engranaje, en una ventana propia **opaca** (no depende de la opacidad ni del juego), del lado donde haya lugar (arriba o abajo, a la izquierda de la barra si el overlay está contra el borde derecho). Dos columnas, todo visible sin desplazar. Sin submenús flotantes: "Datos" y "Atajo de bloqueo" abren una **página dentro del mismo menú** con "‹" para volver. Los deslizadores aplican en vivo.
+
+| Zona | Grupo | Control | Rango / paso | Se ve |
+|---|---|---|---|---|
+| Izq. 1 | **Modo** | Segmentado de 3: Grabar todo / Solo vos / Mostrar | — | Ayuda de una línea del modo elegido |
+| Izq. 2 | **Referencia principal** | Segmentado de 2: ◆ IA / ● VOS | — | — |
+| Izq. 3 | **Overlay** | Interruptor **Fijar** (igual al pin, con la tecla) | — | — |
+| | | Deslizador **Tamaño** | 75 a 150 %, paso 5 | "100 %" |
+| | | Deslizador **Opacidad del fondo** | **85** a 95 %, paso 1 | "88 %" |
+| | | Botón **Ocultar overlay** | — | Ver P23 |
+| Der. 1 | **Aviso de frenada** | Interruptor + botón **Probar** | — | — |
+| | | Deslizador **Tamaño del aviso** | 50 a 300 %, paso 10 | "100 %" |
+| | | Deslizador **Anticipación del aviso** | **0,0 a 2,0 s, paso 0,1** | "0,8 s" + ayuda (7.6) |
+| | | Deslizador **Duración máxima** | 1,0 a 2,0 s, paso 0,1 | "1,5 s" |
+| Der. 2 | **Pitido** | Interruptor + botón **Probar** | — | — |
+| Der. 3 | **Atajo** | Fila "Atajo de bloqueo ›" | 4 sugerencias; "Otro: editá `atajo` en config.json" | La tecla actual |
+| Pie | | **Datos ›** (abrir carpeta de datos, abrir carpeta de capturas, exportar…, importar…), **Diagnóstico…**, **Salir** | — | — |
+
+**Orden [Criterio].** Lo que se cambia más en pausa (modo y referencia) arriba a la izquierda; ajustes del overlay debajo; aviso y pitido a la derecha; lo raro (datos, diagnóstico, salir) en el pie, con Salir lejos de los botones Probar. Controles propios: interruptor con tilde en la perilla (la forma lleva el estado, no solo el color), deslizador con perilla recortada, segmentado con la opción elegida en blanco.
+
+**Valores [Criterio].** La opacidad se muestra como el alfa real (85 a 95 %), no como un porcentaje normalizado. Tamaño y opacidad siguen funcionando con el overlay fijado, porque son acciones deliberadas del menú (la bandeja hoy se comporta así); si el usuario prefiere lo contrario, se deshabilitan con la leyenda "Liberá con 📌 para cambiar el tamaño" (ver P27).
+
+### 7.6 Anticipación del aviso (pedido E)
+
+| Dato | Valor |
+|---|---|
+| Etiqueta | **Anticipación del aviso** |
+| Control | Deslizador, 0,0 a 2,0 s, paso 0,1, valor numérico visible ("0,8 s"), marcas cada 0,5 s |
+| Defecto | **0,0 s** |
+| Ayuda | "Segundos antes del punto de frenado en que suena el pitido y el símbolo llega al 100 %. 0 = justo en el punto." |
+| Regla | El pitido suena en `punto − anticipación`. El símbolo llega al 100 % **en ese mismo instante**. La rampa dura **2,0 s fijos** y termina ahí |
+
+Línea de tiempo en `pantallas-fase6.png` (sección 4b). Sigue valiendo todo lo de la 5c (no suena si ya estás frenando, una sola vez por curva, solo la referencia principal). Dos decisiones [Criterio]:
+
+- **La duración máxima se sigue contando desde el punto de frenado** (no desde el pitido). Con anticipación A el símbolo pleno dura A + duración. Ver P33.
+- **"Probar aviso"** pasa a mostrar la rampa de 2 s, el pitido (si está activo) al completarse y el símbolo pleno 1,5 s. Así se oye y ve lo que se eligió. Ver P34.
+
+**Para el Agente 1 [Evidencia, `DecisorAviso`, `ConfigApp`].** Hoy `AvisoRampaS` (1 a 3 s, defecto 2,0) es lo que el usuario ve como "Anticipación del aviso" en la bandeja: cuándo **empieza** a verse el símbolo. Reusar esa clave con el significado nuevo cambiaría el comportamiento de quien ya tiene 2,0. Propuesta: clave nueva `avisoAnticipacionS` (defecto 0, 0 a 2,0); la rampa pasa a ser una constante de 2,0 s (la clave vieja se ignora, sin conversión); el decisor compara el tiempo restante contra `anticipación` para pitar y para llevar el progreso a 1. Tests nuevos: A = 0 (igual que hoy), A = 0,8 y A = 2,0, y "ya frenando" justo antes del pitido.
+
+### 7.7 Animaciones [Criterio]
+
+Nada parpadea, pulsa ni se repite. Si Windows tiene las animaciones desactivadas, todas las duraciones valen 0.
+
+| Qué | Duración | Nota |
+|---|---|---|
+| Panel de guía, entrada / salida | 120 / 200 ms | Sin cambios |
+| Paso Aproximación → Inminente | Instantáneo | Sin cambios |
+| Franja FRENÁ | Fundido de 80 ms | Sin cambios |
+| Símbolo de aviso | Rampa 2,0 s; salida 80 ms | Sin cambios salvo 7.6 |
+| Menú: abrir / cerrar | 120 ms (opacidad + 6 px de desplazamiento) / 80 ms | Una vez |
+| Página interna del menú | 100 ms, fundido | — |
+| Interruptor | 120 ms, la perilla se desliza | — |
+| Hover y presionado de botón | 80 ms, color | — |
+| Pin: fijar / liberar | 120 ms, rotación 45° a 0° | — |
+| Confirmación de cerrar | Fundido de 100 ms; la barra de 5 s se consume lineal | Es un indicador de tiempo, no un pulso |
+| Deslizador | Sin animación | Sigue al mouse |
+
+### 7.8 Contraste [Evidencia]
+
+Calculado con `docs/ui/contraste_fase6.py` (WCAG 2.x). El texto va siempre al 100 %; solo el fondo lleva alfa. El peor caso incluye el **pico de la textura** (blanco al 4 % sobre `base`) y fondo del juego **blanco puro**.
+
+**Texto sobre el panel de guía, peor caso (fondo blanco, textura al pico)**
+
+| Texto | Alfa 0,80 | **Alfa 0,85 (mínimo nuevo)** | Alfa 0,88 | Alfa 0,95 |
+|---|---|---|---|---|
+| Blanco `#FFFFFF` | 9,47 | **11,34** | 12,59 | 15,71 |
+| Título `#EEF1F4` | 8,36 | **10,01** | 11,11 | 13,86 |
+| Secundario `#DDE2E7` | 7,27 | **8,70** | 9,66 | 12,05 |
+| SIN DATOS `#C3CAD1` | 5,72 | **6,85** | 7,61 | 9,49 |
+| Apoyo `#A9B2BC` | **4,41 no** | **5,28** | 5,86 | 7,32 |
+| Ámbar `#FFC24D` | 5,90 | **7,06** | 7,84 | 9,78 |
+| Naranja IA `#FF9A3D` | **4,49 no** | **5,37** | 5,96 | 7,44 |
+| Azul vos `#5AA9FF` | **3,86 no** | **4,62** | 5,13 | 6,40 |
+| Etiqueta roja `#FF8A80` | **4,15 no** | **4,97** | 5,52 | 6,88 |
+
+**Corrección a la sección 1.2.** Allí el rango del deslizador era 0,80 a 0,95, pero el azul sobre blanco ya daba 4,35 con alfa 0,80 (menor a 4,5). Con la textura baja a 3,86. **El alfa mínimo pasa a 0,85** (`MedidasUi.AlfaMinimo`: 0,80 → 0,85; con alfa 0,85 todo cumple, el azul con 4,62). Para llegar a 4,5 sobre blanco el mínimo por color es: apoyo 0,81, naranja 0,81, rojo etiqueta 0,83, azul 0,85. Sobre negro, cielo y pianos, todo cumple incluso con 0,80.
+
+**Otros pares**
+
+| Par | Contraste | Veredicto |
+|---|---|---|
+| Blanco sobre franja `#C62F26` (plana, sin textura) | 5,47 | Cumple |
+| Blanco sobre franja `#3B4652` | 9,62 | Cumple |
+| Opción elegida `#0C0E11` sobre blanco | 19,33 | Cumple |
+| Opción no elegida `#DDE2E7` sobre `sup` | 13,40 | Cumple |
+| CERRAR: blanco sobre `rojo` / en hover `#D8382E` | 5,47 / 4,64 | Cumple |
+| Tilde `rojo` sobre perilla blanca | 5,47 | Cumple |
+| Tecla Ctrl+Alt+L `#EEF1F4` sobre `#2A3139` | 11,60 | Cumple |
+| Chips MOSTRAR / GRABANDO / LIBRE | 7,90 / 6,94 / 7,26 | Cumplen |
+| Texto sobre menú `#0F1216`: blanco / `t3` / `rojo-et` | 18,78 / 8,75 / 8,23 | Cumple |
+
+**Componentes gráficos (mínimo 3:1)**
+
+| Par | Contraste | Veredicto |
+|---|---|---|
+| Borde de botón `#5A6673` sobre el menú | 3,20 | Cumple |
+| Ícono `#DDE2E7` sobre `sup` / hover | 13,40 / 11,38 | Cumple |
+| Ícono discreto (⇄, ✕) `#A9B2BC` sobre el panel | 9,00 | Cumple |
+| Pin fijado `#FF8A80` sobre `#3A1614` | 7,05 | Cumple |
+| Pista del deslizador `#66727F` sobre `sup` | 3,56 | Cumple (la `#33414E` primera daba 1,67 y se descartó) |
+| Perilla blanca sobre pista `#66727F` | 4,91 | Cumple |
+| Interruptor ON `rojo` sobre `sup` / OFF borde `#7C8794` | 3,19 / 4,79 | Cumple |
+| Segmento "ahora" blanco sobre vacío `#232A31` | 14,51 | Cumple |
+| Segmento recorrido `#7C8794` sobre vacío / sobre panel | 3,97 / 5,29 | Cumple |
+| Rombo naranja / círculo azul sobre el panel | 9,15 / 7,87 | Cumple |
+| Acento rojo `#C62F26` sobre el panel | 3,53 | Cumple |
+| Segmento vacío `#2B343D` sobre el panel | 1,53 | **No cumple**: decorativo, no lleva información (la posición la dan el segmento blanco, los grises y los marcadores) |
+| Símbolo `#E53935` contra su contorno `#0C0E11` / sobre cielo claro sin contorno | 4,57 / 2,87 | Sin cambios: el contorno oscuro es obligatorio |
+
+Daltonismo: sin cambios respecto de 1.3 (naranja y azul distintos por matiz, iso-luminantes por brillo; la forma rombo / círculo y la palabra IA / VOS son la redundancia). El pin y el interruptor no dependen del color (forma y texto FIJO / LIBRE).
+
+### 7.9 Checklist del handover, revalidada
+
+| # | Ítem | Veredicto | Razón |
+|---|---|---|---|
+| 1 | Se lee en menos de 0,5 s | **Cumple en diseño, sin verificar en AMS2** | La jerarquía no cambió (título, barra, etiquetas). La barra segmentada sigue sin números; la cabecera con botones queda arriba y fuera de la zona de lectura. Cifras de GRABANDO más grandes (44) [Criterio] |
+| 2 | Contraste de texto ≥ 4,5:1 | **Cumple con una condición** | Con alfa ≥ 0,85 todo cumple, incluso sobre blanco y con la textura al pico (mín. 4,62, azul). Con 0,80 fallan azul, apoyo, naranja y etiqueta roja: por eso el mínimo sube a 0,85 (7.8) [Evidencia] |
+| 3 | Naranja y azul se distinguen con daltonismo y por brillo | **Cumple por matiz y por forma; no por brillo** | Sin cambios: iso-luminantes; rombo / círculo y palabra lo resuelven (1.3) [Evidencia] |
+| 4 | Sin parpadeo; rojo no invasivo | **Cumple en diseño, sin verificar en AMS2** | Ninguna animación repetida (7.7). Superficie roja grande solo en FRENÁ (≈ 16 %); el resto es acento de 28 × 3, marca de 2 px, interruptores y CERRAR (< 1 %) [Evidencia aritmética] |
+| 5 | Posición por defecto no tapa el HUD | **No verificable** | El conjunto crece ≈ 32 px por la barra (≈ 290 en Aproximación). Posición arrastrable. Ver P29 |
+| 6 | Bloquear/desbloquear se entiende y el menú se encuentra | **Cumple en diseño, sin verificar en AMS2** | Pin visible con estado en forma y palabra, atajo visible, engranaje siempre activo; ya no depende de la bandeja. Se usa con el mouse en pausa; con el cursor oculto en carrera no hay forma de usarlo (es esperado) |
+| 7 | SIN DATOS y GRABANDO dicen qué hacer | **Cumple** | Los textos apuntan a los botones del overlay (⇄, ⚙) y no a la bandeja; GRABANDO dice cómo parar. Hay que actualizar las cadenas (P26) |
+
+### 7.10 Problemas, con prioridad
+
+| # | Prioridad | Problema | Propuesta |
+|---|---|---|---|
+| P19 | **Bloquea** | Con el overlay fijado, solo los botones deben recibir clics. `WM_NCHITTEST` con `HTTRANSPARENT` pasa el clic solo a ventanas **del mismo hilo**; AMS2 es otro proceso [Referencia de la API de Win32, sin ejecutar] | **Ventana aparte para los botones** (7.11) |
+| P20 | **Bloquea** | Reusar `avisoRampaS` como anticipación cambia el comportamiento de configuraciones existentes (7.6) | Clave nueva `avisoAnticipacionS`; rampa fija 2,0 s; tests |
+| P21 | **Bloquea** | Alfa mínimo 0,80 no cumple 4,5:1 sobre blanco (azul 3,86) | `AlfaMinimo` = 0,85 (una constante) |
+| P22 | Importante | Con escala < 0,875 los botones bajan de 28 px reales | Escala inversa de la barra (7.4) |
+| P23 | Importante | "Ocultar overlay" deja sin botones para volver a mostrarlo (solo bandeja) | Al ocultar, dejar visible solo una pastilla de 32 × 32 con el engranaje que abre el menú con "Mostrar overlay". **Decidir con el usuario** |
+| P24 | Importante | Las ventanas sin activación no reciben teclado: Esc y flechas no funcionan [sin verificar] | Menú pensado solo para mouse; cierre con ✕ del menú y el engranaje; no robar el foco de AMS2 |
+| P25 | Importante | El menú podría quedar abierto al volver a manejar y tapar la pista | Se cierra solo tras 15 s con el mouse fuera del menú [Criterio, ajustable] |
+| P26 | Importante | Seis textos nombran la bandeja (`ConstructorVista`: 3; `ServicioOverlay`: 2 pies de GRABANDO; texto de "Cómo bloquear") | Cambiarlos por "botón ⇄ ›" y "⚙ ›" (ver 7.3); el globo de primer arranque también |
+| P27 | Importante | ¿Tamaño y opacidad con el overlay fijado? Se dejó activo (como la bandeja) | Confirmar con el usuario; alternativa en 7.5 |
+| P28 | Importante | Un cambio de modo accidental a Grabar puede modificar datos guardados [sin verificar qué se pisa] | Popover de 3 opciones, nunca ciclo; el chip GRABANDO ya es visible |
+| P29 | Importante | La barra suma ≈ 32 px de alto (≈ 290 en Aproximación, ≈ 27 % de 1080p) | Verificar con el HUD completo en el .exe |
+| P30 | Menor | Textura con escala o DPI no enteros puede dar moiré | Si molesta, relleno plano (constante en código) |
+| P31 | Menor | Tooltips en ventanas sin activación pueden no mostrarse [sin verificar] | El estado ya está en la etiqueta FIJO / LIBRE y el atajo en la barra |
+| P32 | Menor | Costura entre la ventana de botones y la del overlay si la textura queda desfasada | Mismo pincel con el desfase de la posición de la ventana |
+| P33 | Menor | Con anticipación alta el símbolo pleno dura A + duración | Revisar con el usuario si prefiere contar la duración desde el pitido |
+| P34 | Menor | "Probar aviso" cambia de significado (7.6) | Confirmar con el usuario |
+| P35 | Menor | Menú de 624 px en pantallas de menos de ≈ 800 px de ancho | Caer a una columna con desplazamiento |
+
+Los pendientes P16 (botón de modo) y P17 (✕ / menú sobre el overlay) de la 5b quedan **resueltos en diseño** por 7.4.
+
+### 7.11 Implementación en WPF
+
+**Clics solo en los botones cuando está fijado.**
+
+| Opción | Veredicto | Razón |
+|---|---|---|
+| A. `WM_NCHITTEST` devolviendo `HTTRANSPARENT` fuera de los botones | **No usar** | `HTTRANSPARENT` solo reenvía a ventanas del mismo hilo; los clics no llegarían a AMS2 [documentación de Win32, sin ejecutar] |
+| B. **Ventana chica aparte solo para los botones** | **Recomendada** | La ventana grande conserva tal cual `WS_EX_LAYERED \| TRANSPARENT \| NOACTIVATE \| TOOLWINDOW` cuando está fijada (camino de la 5c, ya compilado). La ventana de botones es otra, sin `TRANSPARENT`, con `NOACTIVATE`. Sin condiciones de carrera ni sondeo |
+| C. Alternar `WS_EX_TRANSPARENT` según la posición del cursor (temporizador o gancho) | Último recurso | Depende de un sondeo (≈ 60 Hz); un clic durante el cambio de estilo puede perderse; más piezas móviles |
+
+Detalles de B:
+
+- **Ventana de botones** (`VentanaBarra`): ≈ 140 × 32 con los cuatro botones y el separador; solo ese rectángulo bloquea clics del juego. `Topmost`, `ShowActivated=false`, `WS_EX_NOACTIVATE \| TOOLWINDOW`, **sin** `AllowsTransparency` (es un rectángulo: se dibuja por hardware y la prueba de impacto es trivial), con la ventana del overlay como `Owner` para que quede encima.
+- **La etiqueta FIJO / LIBRE y la tecla** viven en la ventana grande (dejan pasar los clics). Al confirmar la ✕ la ventana de botones se agranda a la fila completa (292 × 32) durante la pregunta.
+- **Posición:** la barra va **arriba** del overlay a propósito: su desfase respecto de la esquina superior de la ventana grande es fijo aunque la tarjeta crezca o se achique, así que la ventana de botones solo se reubica al mover, cambiar el tamaño o cambiar el DPI (acciones explícitas), no en cada cambio de estado. Si la barra estuviera abajo habría que moverla en cada estado y se vería un salto entre las dos ventanas.
+- **DPI:** reposicionar con `SetWindowPos` y `SWP_NOACTIVATE`; en monitores con DPI distinto, medir en píxeles físicos [sin verificar].
+- **Foco:** `NOACTIVATE` hace que un clic en los botones no le saque el foco a AMS2. A cambio, el teclado no llega al menú (P24). Quitar `NOACTIVATE` para tener teclado robaría el foco del juego: no recomendado.
+
+**Menú con deslizadores.**
+
+- **Recomendación: una ventana propia** (`WindowStyle=None`, `AllowsTransparency` para el corte de esquina, `Topmost`, `ShowActivated=false`, sin barra de tareas, `Owner` = ventana de botones), no un `Popup` ni un `ContextMenu`.
+- **Por qué no `ContextMenu`:** cierra con cualquier clic fuera, captura el mouse y el teclado, y un `Slider` dentro de un `MenuItem` pelea con esa captura al arrastrar la perilla. **Por qué no `Popup`:** se cierra al perder la activación (que aquí nunca la tiene), tiene problemas conocidos de orden en Z con ventanas `Topmost` y de reposicionamiento con DPI [sin verificar]. Con una ventana propia el cierre es explícito (✕ del menú, engranaje, 15 s fuera del menú, o al ocultar el overlay).
+- **Posición:** se calcula al abrir y no se mueve mientras está abierto. Cambiar el tamaño del overlay con el deslizador mueve la barra (y el engranaje) pero no el menú.
+- **Deslizadores:** `IsMoveToPointEnabled=True` (clic en la pista salta), `IsSnapToTickEnabled` con el paso de 7.5. Aplicar en vivo y **guardar `config.json` 500 ms después del último cambio**, no en cada movimiento.
+- **Páginas internas** ("Datos", "Atajo") en lugar de submenús: se cambia el contenido de la misma ventana; evita ventanas anidadas.
+
+**Rendimiento de la textura.**
+
+- Un solo `DrawingBrush` **congelado** (`Freeze()`) compartido por todas las tarjetas y el menú; `RenderOptions.CachingHint = Cache`.
+- Alfa en el `Opacity` del **pincel**, no en el elemento: `Opacity` en un contenedor fuerza render fuera de pantalla (y atenuaría el texto, contra la regla).
+- Esquina cortada con un `Path` / `StreamGeometry` de relleno, no con `Clip`. Sin `DropShadowEffect` ni otros efectos de mapa de bits.
+- Las ventanas con `AllowsTransparency` se componen por software: el costo es área × frecuencia de repintado. El overlay se actualiza a ≤ 10 Hz salvo el aviso (ventana chica, 60 Hz, como hoy). La textura es estática, así que no suma costo por cuadro **[estimado, sin medir en WPF ni en AMS2]**.
+
+### 7.12 Supuestos y sin verificar
+
+- **Sin verificar en AMS2:** todo el comportamiento de ventanas (clics, foco, orden en Z, DPI), la lectura en 0,5 s, el alto con el HUD completo y la textura a escala real. Las pantallas son un dibujo en HTML, no capturas del .exe.
+- **Referencias del usuario:** solo se miraron localmente; el parecido es de estilo.
+- **Fondo peor caso:** blanco puro; textura al pico del 4 %.
+- **Documentación de Win32** (`HTTRANSPARENT` entre procesos, `NOACTIVATE`): recordada, no probada aquí.
+- **WCAG 2.5.8 (24 px):** de memoria, solo para justificar los 28 / 32 px.
+- **Alturas y anchos del menú y del conjunto:** estimados sobre la ilustración, no medidos en WPF.
+- **Nombre de la clave nueva** (`avisoAnticipacionS`), el autocierre de 15 s, el desplazamiento de 6 px y las duraciones: propuestas.
+- **"Ancho" de los títulos** aproximado con espaciado: no hay fuente ancha embebida.
+- **Atajo `Ctrl+Alt+L`:** sin comprobar choques con Moza o AMS2 (igual que antes).
