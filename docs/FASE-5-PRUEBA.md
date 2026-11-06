@@ -1,4 +1,4 @@
-# Fase 5, 5b y 5c: cómo probar el .exe con AMS2
+# Fase 5, 5b, 5c y 5d: cómo probar el .exe con AMS2
 
 Todo lo de la ventana, la bandeja, el atajo, el click-through, el aviso de frenada, el sonido, las fuentes y los cuadros de exportar e importar **compila pero nunca se ejecutó** (se desarrolló en Linux). Esta lista es para probarlo en Windows con AMS2. Anotá qué falla y con qué pantalla.
 
@@ -79,7 +79,7 @@ Todo esto **compila pero nunca se ejecutó** (la lógica está probada en Linux 
 
 6. Pitido activado, modo Mostrar, **sin frenar** (dejá pasar el punto): el símbolo debe empezar a verse unos 2 s antes del punto, ir subiendo y estar **completo justo en el punto**, donde suena el pitido. Mirar si se ve fluido (sin saltos ni parpadeo) y si la escala leve (de 85 % a 100 %) se nota o molesta.
 7. **Frenando a tiempo**: si apretás el freno (> 15 %) dentro de los últimos ~1 s o ~40 m antes del punto, o al llegar, **no debe sonar el pitido** y el símbolo debe apagarse (fundido corto) y no volver aunque sueltes. Si apretás el freno en el punto o después, el pitido ya sonó en el punto. Un toque de freno más lejos del punto (final de la frenada anterior en una chicane) solo oculta el símbolo mientras dura.
-8. Bandeja › **Anticipación del aviso**: 1,0 a 3,0 s. Cambia desde cuándo empieza a verse. Buscá el valor que te dé tiempo sin distraer. Anotá si el pitido debería sonar antes del punto en vez de en el punto.
+8. Bandeja › **Inicio de la rampa del símbolo** (antes "Anticipación del aviso"): 1,0 a 3,0 s. Cambia desde cuándo empieza a verse. Buscá el valor que te dé tiempo sin distraer.
 9. Una chicane: cada curva avisa por separado y ninguna repite en la misma pasada.
 
 **Referencia principal manda**
@@ -92,10 +92,32 @@ Todo esto **compila pero nunca se ejecutó** (la lógica está probada en Linux 
 12. Bandeja › Modo › **Grabar solo vos**: chip rojo **GRABANDO · SOLO VOS** y, sin guía, contadores solo de VOS. La guía (lo ya guardado) se ve igual.
 13. Antes de empezar, copiá `<clase>.json` aparte. Da unas vueltas en este modo y volvé a **Mostrar** (guarda). Comparando: los bloques `ia`, los nombres y las notas tienen que ser **idénticos**; las curvas que solo tenían IA siguen; solo cambian los bloques `vos`. `mapa.json` no debe cambiar (si no existía, se crea con tus vueltas). Pasar de "Grabar todo" a "solo vos" guarda lo juntado y empieza limpio.
 
+## 9. Fase 5d: sincronía y anticipación
+
+Todo esto **compila pero nunca se ejecutó** (la lógica está probada en Linux; ventana y sonido no). Detalle en UI-SPEC (T_aviso).
+
+**Sincronía del símbolo y el pitido**
+
+1. Pitido activado, anticipación 0 s, sin frenar: el símbolo debe terminar de aparecer (100 %) **justo cuando suena el pitido**, ni antes ni después. Mirá si se nota un desfase fijo (el símbolo llega un poco después o antes del sonido). Si lo hay, anotá cuánto (idealmente con video + audio) para calibrar `CompensacionLatenciaS`.
+2. Repetí a distintas velocidades (frenada desde ~100, ~216 y ~300 km/h): el desfase percibido tiene que ser el mismo.
+3. Probalo en **ventana** y en **pantalla completa sin bordes** (borderless): ¿la ventana transparente se compone igual?
+
+**Deslizador provisorio (bandeja)**
+
+4. Bandeja › **Anticipación del pitido y símbolo**: 0; 0,2; 0,4; 0,6; 0,8; 1,0; 1,5; 2,0 s. Debe quedar marcado el valor actual, también después de reiniciar la app (`avisoAnticipacionS` en `config.json`; un config viejo sin el campo arranca en 0 s).
+5. **Probar aviso**: muestra la rampa completa (duración = "Inicio de la rampa del símbolo") y, con el pitido activado, suena al llegar al 100 %; el símbolo sigue pleno `anticipación + duración` más. **Probar pitido** hace lo mismo pero suena siempre (aunque el pitido esté apagado). Probalos con 0 y con 2,0 s.
+
+**Anticipación en pista**
+
+6. Con 1,0 s: el pitido y el 100 % del símbolo ocurren **1 s antes** del punto de frenado (a 216 km/h, a unos 60 m antes). Con 2,0 s, a ~120 m. El símbolo se mantiene pleno hasta que frenás, 1,5 s después del **punto** o el vértice.
+7. Frená dentro de la zona inmediata de T_aviso (último 1 s o 40 m antes de T_aviso): no debe pitar ni verse. Frená después del pitido pero antes del punto: el símbolo se apaga y no vuelve.
+8. Chicane: cada curva avisa una sola vez, también con anticipación alta (con 2 s y dos curvas pegadas, el símbolo de la primera puede seguir pleno cuando suena la segunda).
+9. Anotá el valor de anticipación que te resulte cómodo para el próximo ajuste (valor por defecto y rango del futuro deslizador).
+
 ## Pendiente (previsto, no implementado)
 
 Botón en el HUD para cambiar de modo, "✕" o menú contextual sobre el overlay desbloqueado para cerrarlo, y comprobar en Windows el nombre de pista largo. Ver UI-SPEC P16 a P18.
 
 ## Qué no cubre
 
-No hay release por tag (fase 6). Las pruebas automáticas (`dotnet test`) cubren la lógica del Core —modelo de vista, anti-parpadeo, configuración, servicio con el simulador y con capturas reales opcionales, **aviso de frenada** (cuándo mostrar y ocultar, anti-repetición), **generador del WAV del pitido**, **zip de respaldo con protección zip-slip**, y desde la 5c el **decisor del aviso** (rampa, "ya frenando", referencia principal), las **causas del SIN DATOS** y el **modo Grabar solo vos**— pero **no** la ventana, el aviso dibujado, el sonido real, los cuadros de diálogo, la bandeja, el atajo ni el click-through.
+No hay release por tag (fase 6). Las pruebas automáticas (`dotnet test`) cubren la lógica del Core —modelo de vista, anti-parpadeo, configuración, servicio con el simulador y con capturas reales opcionales, **aviso de frenada** (cuándo mostrar y ocultar, anti-repetición), **generador del WAV del pitido**, **zip de respaldo con protección zip-slip**, y desde la 5c el **decisor del aviso** (rampa, "ya frenando", referencia principal; en la 5d, T_aviso, anticipación y sincronía pitido/símbolo con el simulador y con capturas reales), las **causas del SIN DATOS** y el **modo Grabar solo vos**— pero **no** la ventana, el aviso dibujado, el sonido real, los cuadros de diálogo, la bandeja, el atajo ni el click-through.

@@ -43,6 +43,15 @@ Dos partes, separadas a propósito:
 - **Fuentes:** Barlow Condensed (500/600/700) e Inter (400/600/700) embebidas desde las fuentes originales con licencia OFL (`src/AMS2Frenado.App/Fuentes/`, con sus licencias). Si WPF no las toma, cae al respaldo de la spec (Bahnschrift SemiCondensed / Segoe UI). Pendiente de comprobar en Windows qué pesos elige WPF (SemiBold/Medium) y el espaciado entre letras de la spec, que WPF no ofrece en `TextBlock` y no se aplicó.
 - **Carteles por pista** siguen en el `mapa.json` de cada pista (campo `carteles`), no en `config.json`.
 
+## Fase 5d: sincronía del símbolo con el pitido y anticipación
+
+Detalle en [docs/UI-SPEC.md](docs/UI-SPEC.md) (T_aviso), qué probar en [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md) sección 9. **Ventana y sonido compilan pero no se ejecutaron.**
+
+- **Un único instante de aviso T_aviso** = punto de frenado − anticipación. La rampa del símbolo llega a 1,0 en T_aviso y el pitido se pide en la misma muestra del `DecisorAviso`; probado con el simulador y con capturas reales (27 y 39 Hz, huecos de 0,45 s, anticipaciones 0, 0,5, 1 y 2 s, velocidades de 100 a 300 km/h).
+- **Nueva opción `avisoAnticipacionS`** (0 a 2,0 s, paso 0,1; 0 = como antes): el pitido suena y el símbolo llega al 100 % esos segundos *antes* del punto. Provisorio en la bandeja › "Anticipación del pitido y símbolo"; `ServicioOverlay.AvisoAnticipacionS` queda listo para el deslizador del menú de configuración.
+- **Sin fundido ni tope de entrada propios** en la ventana del símbolo (solo queda el fundido de salida). Latencia que no se puede quitar (telemetría, composición de la ventana transparente, `SoundPlayer`) documentada, con `CompensacionLatenciaS` en 0 hasta calibrar en pista.
+- El menú "Anticipación del aviso" pasó a llamarse "Inicio de la rampa del símbolo" (es `avisoRampaS`).
+
 ## Fase 5c: ajustes tras la segunda prueba con AMS2
 
 Decisiones del usuario después de probar el .exe de la 5b (detalle en [docs/UI-SPEC.md](docs/UI-SPEC.md), qué probar en [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md) sección 8). **Todo lo de ventana y sonido compila pero no se ejecutó**; la lógica tiene pruebas en Linux.
