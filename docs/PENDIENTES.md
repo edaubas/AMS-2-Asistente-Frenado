@@ -25,11 +25,22 @@ Lista viva de cosas anotadas por el usuario que todavía no se implementaron.
 - **Pedido:** que todo el menú de la bandeja sea accesible desde el overlay mismo, sin ir al ícono de la bandeja de Windows, que es incómodo. Anotado el 6 de noviembre de 2026.
 - **Cómo:** un ícono de engranaje (el típico de configuración) en el overlay, que abre un menú con las mismas opciones, con el diseño del rediseño visual de arriba.
 - **Opciones a replicar** (las del menú actual): bloquear overlay, modo, referencia principal, tamaño del overlay, opacidad del fondo, aviso de frenada (activar, probar, tamaño, duración máxima), pitido (activar, probar), atajo de bloqueo, ocultar overlay, datos (abrir carpetas, exportar, importar), diagnóstico y salir.
-- **Supuestos y puntos a resolver** (sin decidir):
-  - Con el overlay bloqueado, los clics lo atraviesan. El engranaje necesita recibir clics: hay que decidir si es una ventana chica aparte que no deja pasar clics, o si solo se puede usar al desbloquear.
-  - Con AMS2 en pantalla, el cursor suele estar oculto. El engranaje sirve sobre todo en menús o en pausa.
+- **Decisiones del usuario (6 de noviembre de 2026):**
+  - "Bloqueado" significa solo que no se puede mover ni cambiar de tamaño. El engranaje tiene que poder usarse SIEMPRE, también bloqueado.
+  - Junto al engranaje va un botón con el ícono típico de "fijar" (chincheta) que bloquea y desbloquea. El atajo `Ctrl+Alt+L` se mantiene.
+- **Consecuencia técnica a resolver:** hasta ahora, bloqueado = los clics atraviesan toda la ventana. Con esta decisión, solo los botones (engranaje, fijar, y los que se sumen) reciben clics, y el resto del overlay sigue dejando pasar los clics al juego. Opciones: respuesta a `WM_NCHITTEST` que devuelve "transparente" fuera de los botones, o una ventana chica aparte para los botones. Lo decide el desarrollador y lo documenta.
+- **Supuestos:**
+  - Con AMS2 en pantalla, el cursor suele estar oculto. Los botones sirven sobre todo en pausa o en menús.
   - La bandeja se mantiene como respaldo.
-  - Esto se junta con "✕ para cerrar" y "botón de modo" ya anotados: conviene diseñarlos juntos.
+- **Se hace junto con:** el "✕" para cerrar, el botón de modo y el rediseño estilo GT World Challenge (ver arriba).
+
+## Plan acordado
+
+Cuando terminen los ajustes de `fase-5c-ajustes` y se corrijan sus errores, se aplican todos los pendientes de este documento en una tanda:
+
+1. Agente 2 (UI/UX): actualiza `docs/UI-SPEC.md` con el rediseño, el engranaje con menú, el botón de fijar, el "✕" y el botón de modo.
+2. Agente 1: lo implementa, en una rama nueva.
+3. El usuario prueba el `.exe` y el Agente 2 revisa sobre el resultado real.
 
 ## Otros pendientes ya anotados
 
