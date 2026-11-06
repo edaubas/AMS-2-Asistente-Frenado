@@ -204,23 +204,64 @@ internal sealed class Bandeja : IDisposable
         catch (Exception e) { Globo("No se pudo abrir la carpeta", e.Message, error: true); }
     }
 
-    /// <summary>Icono dibujado en tiempo de ejecucion (candado cerrado = bloqueado, abierto = desbloqueado).</summary>
+    private Dibujo.Bitmap? _base;
+    private bool _baseIntentada;
+
+    /// <summary>El icono de la app (2 + AF) a 32 px, tomado del .ico embebido. Null si no se pudo leer (se usa el dibujo de respaldo).</summary>
+    private Dibujo.Bitmap? BaseIcono()
+    {
+        if (_baseIntentada) return _base;
+        _baseIntentada = true;
+        try
+        {
+            var info = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/Recursos/icono.ico"));
+            if (info is null) return null;
+            using var s = info.Stream;
+            using var ico = new Dibujo.Icon(s, new Dibujo.Size(32, 32));
+            _base = ico.ToBitmap();
+        }
+        catch (Exception e) when (e is IOException or ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            _base = null;
+        }
+        return _base;
+    }
+
+    /// <summary>
+    /// Icono de la bandeja: el icono de la app con un indicador chico abajo a la derecha que dice si el overlay esta fijado
+    /// (candado cerrado) o libre (candado abierto). A 16 px (100 % de escala) el indicador se lee como un punto: el estado tambien
+    /// esta en el tooltip del icono y en el pin del overlay. Si el .ico no carga, queda el dibujo de antes (candado en un disco).
+    /// Dibujado en tiempo de ejecucion; compila, SIN EJECUTAR.
+    /// </summary>
     private void PonerIcono(bool bloqueado)
     {
         using var bmp = new Dibujo.Bitmap(32, 32);
         using (var g = Dibujo.Graphics.FromImage(bmp))
         {
             g.SmoothingMode = Dibujo.Drawing2D.SmoothingMode.AntiAlias;
+            g.InterpolationMode = Dibujo.Drawing2D.InterpolationMode.HighQualityBicubic;
             g.Clear(Dibujo.Color.Transparent);
-            using var fondo = new Dibujo.SolidBrush(Dibujo.Color.FromArgb(255, 12, 14, 17));
-            g.FillEllipse(fondo, 1, 1, 30, 30);
-            using var trazo = new Dibujo.Pen(Dibujo.Color.White, 3f);
+            var icono = BaseIcono();
+            using var trazo = new Dibujo.Pen(Dibujo.Color.White, icono is null ? 3f : 2f);
             using var naranja = new Dibujo.SolidBrush(Dibujo.Color.FromArgb(255, 255, 154, 61));
-            // cuerpo del candado
-            g.FillRectangle(naranja, 9, 15, 14, 10);
-            // arco: cerrado = centrado; abierto = levantado hacia un costado
-            if (bloqueado) g.DrawArc(trazo, 11, 6, 10, 12, 180, 180);
-            else g.DrawArc(trazo, 15, 4, 10, 12, 180, 180);
+            if (icono is null)
+            {
+                using var fondo = new Dibujo.SolidBrush(Dibujo.Color.FromArgb(255, 12, 14, 17));
+                g.FillEllipse(fondo, 1, 1, 30, 30);
+                g.FillRectangle(naranja, 9, 15, 14, 10);
+                if (bloqueado) g.DrawArc(trazo, 11, 6, 10, 12, 180, 180);
+                else g.DrawArc(trazo, 15, 4, 10, 12, 180, 180);
+            }
+            else
+            {
+                g.DrawImage(icono, 0, 0, 32, 32);
+                // indicador: disco oscuro de 15 px con un candado minimo (cuerpo naranja + arco blanco: centrado = cerrado, levantado = abierto)
+                using var disco = new Dibujo.SolidBrush(Dibujo.Color.FromArgb(255, 12, 14, 17));
+                g.FillEllipse(disco, 16, 16, 16, 16);
+                g.FillRectangle(naranja, 20, 24, 8, 6);
+                if (bloqueado) g.DrawArc(trazo, 21.5f, 18.5f, 5, 7, 180, 180);
+                else g.DrawArc(trazo, 24f, 17f, 5, 7, 180, 180);
+            }
         }
         var h = bmp.GetHicon();
         var anterior = _iconoActual;
@@ -236,5 +277,6 @@ internal sealed class Bandeja : IDisposable
         _icono.Dispose();
         _menu.Dispose();
         _iconoActual?.Dispose();
+        _base?.Dispose();
     }
 }

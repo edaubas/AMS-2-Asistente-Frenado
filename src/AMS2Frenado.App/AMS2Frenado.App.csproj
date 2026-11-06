@@ -7,6 +7,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>AMS2Frenado.App</RootNamespace>
     <AssemblyName>AMS2Frenado</AssemblyName>
+    <!-- icono propio (2 + AF); fuente SVG y script en tools/icono. Lo toma el .exe (Explorador, barra de tareas, Alt-Tab) -->
+    <ApplicationIcon>Recursos\icono.ico</ApplicationIcon>
     <!-- con PublishSingleFile, empaqueta tambien las DLL nativas de WPF dentro del .exe -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <!-- comprime el contenido del .exe: pesa menos, arranca un poco mas lento -->
@@ -20,6 +22,8 @@
   <ItemGroup>
     <!-- Barlow Condensed e Inter (OFL), embebidas -->
     <Resource Include="Fuentes\*.ttf" />
+    <!-- el mismo .ico, tambien como recurso WPF: Icon de las ventanas y base del icono de la bandeja -->
+    <Resource Include="Recursos\icono.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AMS2Frenado.Core\AMS2Frenado.Core.csproj" />
