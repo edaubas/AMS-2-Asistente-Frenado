@@ -784,3 +784,17 @@ Detalles de B:
 - **Nombre de la clave nueva** (`avisoAnticipacionS`), el autocierre de 15 s, el desplazamiento de 6 px y las duraciones: propuestas.
 - **"Ancho" de los títulos** aproximado con espaciado: no hay fuente ancha embebida.
 - **Atajo `Ctrl+Alt+L`:** sin comprobar choques con Moza o AMS2 (igual que antes).
+
+### 7.13 Implementación (Agente 1, rama `fase-6-rediseno`) [compila, sin ejecutar]
+
+Lo que se hizo distinto o además de lo dibujado:
+
+- **Rampa del símbolo.** No se fijó en 2,0 s: se conserva `avisoRampaS` de la 5d (1,0 a 3,0 s, defecto 2,0) como deslizador "Inicio de la rampa (avanzado)" en la columna del aviso. Por eso el menú mide unos 50 px más que lo dibujado. `avisoAnticipacionS` se mantiene. Decisión a confirmar con el usuario.
+- **Escala inversa (7.4).** Debajo de 0,875 de escala del overlay la barra se queda en 0,875: se garantiza el área clicable de 28 px reales (32 × 0,875); el dibujo de 28 puede bajar a 24,5.
+- **Popover de modo.** Es la misma ventana de botones, que crece hacia abajo (220 de ancho), no una ventana aparte.
+- **Pastilla (P23).** Con el overlay oculto la ventana grande sigue abierta con el contenido colapsado (es el `Owner` de la barra) y queda la pastilla de 32 × 32 con el engranaje, donde estaba el hueco de la barra; el menú ofrece "Mostrar overlay".
+- **Posición de la barra.** Se recalcula en cada tick a partir del hueco `ReservaBarra` de la cabecera (no hay eventos de movimiento que se puedan perder). Con el chip LIBRE la cabecera crece y la barra baja con ella.
+- **Espaciado de títulos.** WPF no tiene espaciado de letras: se aproxima con *hair spaces* (U+200A) en FRENÁ, TOQUE, LEVANTÁ, SIN DATOS y los títulos del menú. Sin verificar cómo lo resuelven Barlow Condensed y el respaldo.
+- **Colores.** Solo los tokens de 7.2; el contraste se recalculó con `docs/ui/contraste_fase6.py` (sin cambios). Presionado del botón rojo (`#A82720`) es más oscuro que el rojo base, con texto blanco.
+- **Contorno azul del modo libre.** Rectangular (sin la esquina cortada).
+

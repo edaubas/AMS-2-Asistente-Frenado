@@ -2,7 +2,7 @@
 
 App externa para Windows que lee la telemetría de **Automobilista 2** y muestra, por pista, variante y clase, dónde frena la IA y dónde frenás vos. Es un ayuda memoria para aprender o recordar circuitos.
 
-**Estado:** fases 1 (base del repo), 2 (lector y captura), 3 (grabación), 4 (guía), 5 (overlay y bandeja) y **5b (ajustes tras la primera prueba con AMS2)** y **5c (ajustes tras la segunda prueba)** implementadas. **Lo de ventana, sonido y cuadros de diálogo compila pero no se ejecutó nunca**: ni el overlay WPF, ni el aviso de frenada, ni el pitido, ni exportar/importar, ni la bandeja, el atajo o las fuentes se vieron en Windows; todo lo que lee el juego está *sin probar en AMS2*. Falta la fase 6 (release por tag). Pasos para probar el `.exe`: [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md); diagnóstico de la fase 2: [docs/FASE-2-DIAGNOSTICO.md](docs/FASE-2-DIAGNOSTICO.md).
+**Estado:** fases 1 (base del repo), 2 (lector y captura), 3 (grabación), 4 (guía), 5 (overlay y bandeja) y **5b (ajustes tras la primera prueba con AMS2)** **5c (ajustes tras la segunda prueba)**, **5d (sincronía del símbolo con el pitido)** y **6 (rediseño: engranaje, botones y estética GT)** implementadas. **Lo de ventana, sonido y cuadros de diálogo compila pero no se ejecutó nunca**: ni el overlay WPF, ni el aviso de frenada, ni el pitido, ni exportar/importar, ni la bandeja, el atajo o las fuentes se vieron en Windows; todo lo que lee el juego está *sin probar en AMS2*. Falta el release por tag. Pasos para probar el `.exe`: [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md) y, para el rediseño, [docs/FASE-6-PRUEBA.md](docs/FASE-6-PRUEBA.md); diagnóstico de la fase 2: [docs/FASE-2-DIAGNOSTICO.md](docs/FASE-2-DIAGNOSTICO.md).
 
 - [Handover: arquitectura, fases y agentes](docs/HANDOVER.md)
 - [Carteles de frenada: cómo se calculan (desactivados en la UI desde la fase 5b)](docs/CARTELES.md)
@@ -42,6 +42,17 @@ Dos partes, separadas a propósito:
 - **`AMS2Frenado.App` (compila, sin ejecutar):** `VentanaOverlay` (WPF sin bordes, siempre arriba, semitransparente; bloqueada es click-through con `WS_EX_LAYERED|TRANSPARENT|NOACTIVATE|TOOLWINDOW`; desbloqueada se mueve y se redimensiona), `Bandeja` (`NotifyIcon` de `System.Windows.Forms`: se eligió por ser lo más corto y conocido en WPF, y solo se usa para el ícono y el menú), `AtajoGlobal` (`RegisterHotKey`; si el registro falla avisa con un globo y la app sigue), `ControladorApp` (lee ~60 Hz y une todo). La ventana de diagnóstico de la fase 2 sigue accesible desde la bandeja.
 - **Fuentes:** Barlow Condensed (500/600/700) e Inter (400/600/700) embebidas desde las fuentes originales con licencia OFL (`src/AMS2Frenado.App/Fuentes/`, con sus licencias). Si WPF no las toma, cae al respaldo de la spec (Bahnschrift SemiCondensed / Segoe UI). Pendiente de comprobar en Windows qué pesos elige WPF (SemiBold/Medium) y el espaciado entre letras de la spec, que WPF no ofrece en `TextBlock` y no se aplicó.
 - **Carteles por pista** siguen en el `mapa.json` de cada pista (campo `carteles`), no en `config.json`.
+
+## Fase 6: rediseño (engranaje, botones, estética tipo GT)
+
+Spec: `docs/UI-SPEC.md` sección 7 y `docs/ui/pantallas-fase6.png`. **Todo lo de ventanas compila pero no se ejecutó.**
+
+- **Estética:** tarjetas oscuras con textura de carbono (un `DrawingBrush` congelado de 6×6 con una diagonal al 4 %), esquina cortada de 14 px a 45°, acento rojo, títulos condensados (Barlow Condensed), barra segmentada de 16 y cifras de GRABANDO separadas por ":". Sin logos ni imágenes de terceros. El fondo mínimo sube de 0,80 a 0,85 (`opacidad`; un `config.json` viejo se corrige solo).
+- **Barra de botones arriba del panel:** ⇄ modo (popover de 3 opciones, nunca cicla), ⚙ ajustes, chincheta (fijar / liberar, con la palabra FIJO / LIBRE y la tecla) y ✕ (cerrar con doble paso en el lugar, se cancela solo a los 5 s). "Fijado" solo significa no mover ni cambiar el tamaño: **los botones se usan siempre**. Son una **ventana chica aparte** (`VentanaBarra`, sin click-through y sin robar el foco); la ventana grande conserva el click-through de la 5c. No se usa `WM_NCHITTEST`: `HTTRANSPARENT` no cruza procesos y AMS2 es otro.
+- **Menú de configuración (⚙):** ventana propia y opaca de 624 px en dos columnas (`VentanaMenu`), con **todas** las opciones de la bandeja: modo, referencia principal, fijar, tamaño, opacidad, ocultar overlay, aviso (activar, probar, tamaño, anticipación, duración, inicio de la rampa), pitido (activar, probar), atajo, datos, diagnóstico y salir. "Datos" y "Atajo" son páginas internas. Deslizadores en vivo; `config.json` se guarda 500 ms después del último cambio. Solo mouse; se cierra a los 15 s con el mouse afuera. La bandeja queda como respaldo con las mismas opciones.
+- **Ocultar overlay** deja una pastilla de 32×32 con el engranaje; desde ahí el menú ofrece "Mostrar overlay".
+- **Lógica con pruebas (Core):** `BarraBotones`, `ConfirmacionTemporizada`, `MenuConfig` (rangos, pasos, coma decimal, autocierre, guardado diferido), escala inversa, posición del menú. Los 6 textos de SIN DATOS / GRABANDO que nombraban la "Bandeja" ahora apuntan a los botones del overlay.
+- **Rampa del símbolo:** se conserva la de la 5d (`avisoRampaS`, 1,0 a 3,0 s, por defecto 2,0); el spec proponía fijarla en 2,0 s. En el menú aparece como opción avanzada. `avisoAnticipacionS` se mantiene (0 a 2,0 s).
 
 ## Fase 5d: sincronía del símbolo con el pitido y anticipación
 
@@ -83,7 +94,7 @@ Diferencia con la spec: el panel de grabación muestra la clase en lugar de "vue
 ## Estructura
 
 - `src/AMS2Frenado.Core`: `struct SharedMemory` v14 (20 700 bytes), lector con chequeo de versión y de `mSequenceNumber`, captura cruda y reproductor, grabación, guía, la lógica del overlay (`Overlay/`) y el respaldo de datos (`Datos/`). Sin UI.
-- `src/AMS2Frenado.App`: WPF: overlay, aviso de frenada, bandeja, atajo, pitido y la ventana de diagnóstico. Sin ejecutar en Windows.
+- `src/AMS2Frenado.App`: WPF: overlay, barra de botones, menú de configuración, aviso de frenada, bandeja (respaldo), atajo, pitido y la ventana de diagnóstico. Sin ejecutar en Windows.
 - `src/AMS2Frenado.Tests`: xUnit (tamaño y offsets del struct, versión, secuencia, round-trip de captura, detectores, agrupado, grabador con simulador y captura real opcional).
 
 ## Compilar y probar
