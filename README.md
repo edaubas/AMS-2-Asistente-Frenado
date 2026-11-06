@@ -2,10 +2,11 @@
 
 App externa para Windows que lee la telemetría de **Automobilista 2** y muestra, por pista, variante y clase, dónde frena la IA y dónde frenás vos. Es un ayuda memoria para aprender o recordar circuitos.
 
-**Estado:** fases 1 (base del repo), 2 (lector y captura), 3 (grabación), 4 (guía) y 5 (overlay y bandeja) implementadas. **La fase 5 compila pero no se ejecutó nunca**: ni el overlay WPF, ni la bandeja, ni el atajo, ni el click-through, ni las fuentes se vieron en Windows; todo lo que lee el juego está *sin probar en AMS2*. Falta la fase 6 (release por tag). Pasos para probar el `.exe`: [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md); diagnóstico de la fase 2: [docs/FASE-2-DIAGNOSTICO.md](docs/FASE-2-DIAGNOSTICO.md).
+**Estado:** fases 1 (base del repo), 2 (lector y captura), 3 (grabación), 4 (guía), 5 (overlay y bandeja) y **5b (ajustes tras la primera prueba con AMS2)** implementadas. **Lo de ventana, sonido y cuadros de diálogo compila pero no se ejecutó nunca**: ni el overlay WPF, ni el aviso de frenada, ni el pitido, ni exportar/importar, ni la bandeja, el atajo o las fuentes se vieron en Windows; todo lo que lee el juego está *sin probar en AMS2*. Falta la fase 6 (release por tag). Pasos para probar el `.exe`: [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md); diagnóstico de la fase 2: [docs/FASE-2-DIAGNOSTICO.md](docs/FASE-2-DIAGNOSTICO.md).
 
 - [Handover: arquitectura, fases y agentes](docs/HANDOVER.md)
-- [Carteles de frenada: cómo se calcula el número grande](docs/CARTELES.md)
+- [Carteles de frenada: cómo se calculan (desactivados en la UI desde la fase 5b)](docs/CARTELES.md)
+- [Qué guarda la app y dónde (tamaños, capturas, respaldo)](docs/DATOS.md)
 - [Especificación de la interfaz (medidas, colores, estados)](docs/UI-SPEC.md) y [cómo probar la fase 5](docs/FASE-5-PRUEBA.md)
 - [Prototipo en Python (referencia de la lógica)](prototipo/)
 
@@ -28,7 +29,7 @@ Probado con el simulador portado del prototipo y con una captura real de AMS2 (W
 - Estados: `SinDatos`, `Lejos`, `Aproximacion`, `Inminente`, `Frena`, `Toque`, `Levanta`. El flag `Grabando` queda previsto y lo fija el modo en la fase 5.
 - Ventana por tiempo: 5 s a la velocidad actual, mínimo 120 m, máximo 400 m (216 km/h = 300 m). Inminente a menos de 100 m del punto de frenado; se oculta pasado el vértice. Todo en `OpcionesGuia`.
 - Histéresis: para la curva que se sigue el estado solo avanza; retrocede únicamente si la posición se aleja más de un margen (20 m) durante al menos 1 s. No parpadea por ruido de ±metros ni por huecos de datos de ~0,45 s a ~27 Hz. Los metros mostrados no suben por ruido.
-- Número grande de la frenada: el **cartel** (400/300/200/100/50) donde frenar, no el metro de la pista; ver [docs/CARTELES.md](docs/CARTELES.md). Los metros restantes quedan como dato chico. IA (naranja) y vos (azul) como dos carteles; si coinciden se muestra uno.
+- Cartel de la frenada (400/300/200/100/50): se sigue calculando en el Core ([docs/CARTELES.md](docs/CARTELES.md)) pero **desde la fase 5b no se muestra** (se leía como cuenta regresiva). Los metros restantes van como dato chico y decreciente.
 - Toque y Levantá: la velocidad mínima es el dato principal; los metros van en chico (Toque) o no hay (Levantá).
 
 Probado con simulación y con la captura real (Watkins Glen GP, GT3_Gen2, variable `AMS2_CAPTURA_PRUEBA`, se salta si falta): la secuencia Lejos → Aproximación → Inminente → Frená → oculto es monótona en las 8 curvas de la IA (y en las curvas extra tuyas, que la guía sigue con la otra referencia), para el auto visto y para los 46 autos de la IA. **Sin probar en AMS2 en vivo**; los 5 s, los umbrales y el desfase de cartel se calibran en pista.
@@ -37,11 +38,22 @@ Probado con simulación y con la captura real (Watkins Glen GP, GT3_Gen2, variab
 
 Dos partes, separadas a propósito:
 
-- **`AMS2Frenado.Core/Overlay/` (con pruebas, corre en Linux):** todo lo que no es ventana. `ConstructorVista` decide qué texto, color y forma se ve por estado (cartel grande, rombo = IA naranja, círculo = vos azul, franja roja solo en FRENÁ, franja neutra en TOQUE/LEVANTÁ, ámbar solo en la cifra de Inminente); `Suavizador` aplica las reglas anti-parpadeo (fundidos de 80/120/200 ms, cifras a 10 Hz como máximo); `ServicioOverlay` integra todo en cada tick (modo Grabar alimenta al `Grabador`; modo Mostrar carga `<clase>.json` y `mapa.json` de la pista + variante + clase y alimenta al `MotorGuia`; sin AMS2, versión distinta de 14 o sin datos avisa en el panel); además `ConfigApp`/`AlmacenConfig` (`%APPDATA%\AMS2AsistenteFrenado\config.json`, escritura atómica, tolera archivo dañado), esquinas, atajo (`Ctrl+Alt+L` por defecto), proyección del mini mapa y selección de archivos de datos.
+- **`AMS2Frenado.Core/Overlay/` (con pruebas, corre en Linux):** todo lo que no es ventana. `ConstructorVista` decide qué texto, color y forma se ve por estado (leyenda con rombo = IA naranja y círculo = vos azul, barra de progreso hasta el punto de frenado, franja roja solo en FRENÁ, franja neutra en TOQUE/LEVANTÁ, ámbar solo en la cuenta regresiva chica de Inminente); `Suavizador` aplica las reglas anti-parpadeo (fundidos de 80/120/200 ms, cifras a 10 Hz como máximo); `ServicioOverlay` integra todo en cada tick (modo Grabar alimenta al `Grabador`; modo Mostrar carga `<clase>.json` y `mapa.json` de la pista + variante + clase y alimenta al `MotorGuia`; sin AMS2, versión distinta de 14 o sin datos avisa en el panel); además `ConfigApp`/`AlmacenConfig` (`%APPDATA%\AMS2AsistenteFrenado\config.json`, escritura atómica, tolera archivo dañado), atajo (`Ctrl+Alt+L` por defecto) y selección de archivos de datos.
 - **`AMS2Frenado.App` (compila, sin ejecutar):** `VentanaOverlay` (WPF sin bordes, siempre arriba, semitransparente; bloqueada es click-through con `WS_EX_LAYERED|TRANSPARENT|NOACTIVATE|TOOLWINDOW`; desbloqueada se mueve y se redimensiona), `Bandeja` (`NotifyIcon` de `System.Windows.Forms`: se eligió por ser lo más corto y conocido en WPF, y solo se usa para el ícono y el menú), `AtajoGlobal` (`RegisterHotKey`; si el registro falla avisa con un globo y la app sigue), `ControladorApp` (lee ~60 Hz y une todo). La ventana de diagnóstico de la fase 2 sigue accesible desde la bandeja.
 - **Fuentes:** Barlow Condensed (500/600/700) e Inter (400/600/700) embebidas desde las fuentes originales con licencia OFL (`src/AMS2Frenado.App/Fuentes/`, con sus licencias). Si WPF no las toma, cae al respaldo de la spec (Bahnschrift SemiCondensed / Segoe UI). Pendiente de comprobar en Windows qué pesos elige WPF (SemiBold/Medium) y el espaciado entre letras de la spec, que WPF no ofrece en `TextBlock` y no se aplicó.
-- **Mapa:** el eje vertical es `-z` (z crece hacia adelante); si el trazo saliera espejado en el juego, es un cambio de signo en `ProyeccionMapa`.
 - **Carteles por pista** siguen en el `mapa.json` de cada pista (campo `carteles`), no en `config.json`.
+
+## Fase 5b: ajustes tras probar el .exe con AMS2
+
+Decisiones del usuario después de la primera prueba (detalle en [docs/UI-SPEC.md](docs/UI-SPEC.md)):
+
+- **Sin mini mapa** en el overlay: el grabador sigue guardando `mapa.json`; el overlay queda mucho más chico (guía + una cabecera con pista, clase y modo).
+- **Sin número grande** de cartel: la frenada se apoya en la barra de progreso, la comparación IA / vos, el nombre de la curva, las velocidades entrada → vértice y los metros chicos que bajan hasta 0. El cartel sigue en el Core ([docs/CARTELES.md](docs/CARTELES.md)).
+- **Sin "Rojo suave"** y **sin esquinas en la bandeja**: franja roja de 40 px; el overlay se mueve a mano y la posición y el tamaño se guardan.
+- **Aviso de frenada** (`AvisoFrenada` en el Core, con pruebas; `VentanaAviso` en la App, sin ejecutar): ventana aparte con el símbolo de freno rojo (vector propio) que aparece al llegar al punto de frenado y se va al apretar el freno (`mBrake` > 0,15), a los 1,5 s (configurable, 1 a 2 s) o al pasar el vértice; una vez por curva y pasada; fundido de 80 ms. Se bloquea y desbloquea junto con el overlay (mismo atajo). Menú: activar, "Probar aviso", tamaño (50–300 %) y duración.
+- **Pitido** robusto: tono senoidal generado en memoria (`GeneradorTono`, con pruebas) y reproducido con `System.Media.SoundPlayer` fuera del hilo de la interfaz (respaldo `SystemSounds.Beep`); "Probar pitido" en el menú. Reemplaza a `Console.Beep`. **No se pudo ejecutar** (Linux).
+- **Respaldo de datos:** bandeja › Datos › Exportar datos… (`.zip` de `%APPDATA%\AMS2AsistenteFrenado\` sin `capturas`) e Importar datos… (valida rutas contra zip-slip, deja `.bak` y no toca lo que el `.zip` no trae), más "Abrir carpeta de capturas". Lógica en `Core/Datos/RespaldoDatos.cs` con pruebas; los cuadros de diálogo compilan sin ejecutar. Dónde está cada cosa y cuánto pesa: [docs/DATOS.md](docs/DATOS.md).
+- **Previsto, no implementado:** botón en el HUD para cambiar de modo y "✕" / menú contextual sobre el overlay desbloqueado.
 
 Diferencia con la spec: el panel de grabación muestra la clase en lugar de "vuelta N" (no se sabe si `mCurrentLap` empieza en 0 o en 1); lo demás sigue la spec.
 
@@ -51,8 +63,8 @@ Diferencia con la spec: el panel de grabación muestra la clase en lugar de "vue
 
 ## Estructura
 
-- `src/AMS2Frenado.Core`: `struct SharedMemory` v14 (20 700 bytes), lector con chequeo de versión y de `mSequenceNumber`, captura cruda y reproductor, grabación, guía y la lógica del overlay (`Overlay/`). Sin UI.
-- `src/AMS2Frenado.App`: WPF: overlay, bandeja, atajo y la ventana de diagnóstico. Sin ejecutar en Windows.
+- `src/AMS2Frenado.Core`: `struct SharedMemory` v14 (20 700 bytes), lector con chequeo de versión y de `mSequenceNumber`, captura cruda y reproductor, grabación, guía, la lógica del overlay (`Overlay/`) y el respaldo de datos (`Datos/`). Sin UI.
+- `src/AMS2Frenado.App`: WPF: overlay, aviso de frenada, bandeja, atajo, pitido y la ventana de diagnóstico. Sin ejecutar en Windows.
 - `src/AMS2Frenado.Tests`: xUnit (tamaño y offsets del struct, versión, secuencia, round-trip de captura, detectores, agrupado, grabador con simulador y captura real opcional).
 
 ## Compilar y probar

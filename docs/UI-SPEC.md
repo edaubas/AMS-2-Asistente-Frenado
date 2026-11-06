@@ -13,10 +13,24 @@ Agente 2, primera participación (sobre el lienzo). Rama `fase-5-ui-spec`. Solo 
 
 **Cambios del usuario que ya incorporé:**
 
-- El número grande es el **cartel** (400/300/200/100/50). La cuenta regresiva queda chica.
-- Un solo cartel si IA y vos coinciden; si no, dos.
+- ~~El número grande es el cartel (400/300/200/100/50).~~ **Reemplazado en la fase 5b**, ver más abajo: el cartel ya no se muestra.
 - Se agregan los estados Toque, Levantá y el flag Grabando.
 - Sin texto explicativo extra en el panel de frenada.
+
+> ## Fase 5b: lo que cambió después de probar el .exe (vigente)
+>
+> El usuario probó la fase 5 con AMS2 y decidió lo siguiente. **Donde el resto de este documento diga otra cosa (cartel grande, mapa, "Rojo suave", cuatro atajos de esquina), manda esta lista.** Los cuadros y medidas viejos se dejaron como historia, marcados con ~~tachado~~ o con la nota "(fase 5b)".
+>
+> | # | Cambio | Dónde queda |
+> |---|---|---|
+> | 1 | **Sin mini mapa** en el overlay (ni "Sin mapa todavía", ni el contador MAPA de GRABANDO, ni "Mostrar mapa" / "Mapa compacto" en la bandeja). El grabador sigue guardando `mapa.json`. | 2, 3.2, 3.4 |
+> | 2 | **Sin número grande de cartel** ("200 m"): se leía como cuenta regresiva. La frenada se apoya en la **barra de progreso** (la regla con rombo = IA y círculo = vos), las etiquetas, el nombre de la curva y las velocidades entrada → vértice. Los metros que faltan quedan como dato chico y decreciente hasta 0. | 2, [CARTELES.md](CARTELES.md) |
+> | 3 | **Sin "Rojo suave"**: la franja roja de 40 px es la única. La opacidad del fondo se queda. | 3.3, 3.5 |
+> | 4 | **Sin esquinas en la bandeja**: el usuario mueve el overlay a mano; posición y tamaño se siguen guardando. | 3.4 |
+> | 5 | **Aviso de frenada** nuevo: símbolo de freno rojo en una ventana aparte. | 2.1 |
+> | 6 | Pitido con WAV generado en memoria y `SoundPlayer` (antes `Console.Beep`). "Probar pitido" en el menú. | 3.4 |
+> | 7 | Exportar / importar datos (.zip) y abrir la carpeta de capturas. | 3.4, [DATOS.md](DATOS.md) |
+> | 8 | Pendientes (no implementados): botón de modo en el HUD, "✕" / menú contextual sobre el overlay desbloqueado y nombre de pista largo. | 4 (P16 a P18) |
 
 ---
 
@@ -149,22 +163,57 @@ Vista: `docs/ui/pantallas.png`.
 | Estado | Contenido exacto |
 |---|---|
 | **Lejos** | Tarjeta de una línea. A la izquierda "Próxima" (12 px, `#A9B2BC`); a la derecha "CURVA 7 · 640 m" (Barlow 600 22 px; el " · 640 m" en `#A9B2BC`, 500). Metros redondeados a 10. Sin panel grande. |
-| **Aproximación** | Encabezado: "CURVA 7" (22/700) y "248 → 96 km/h" (12 px, `#A9B2BC`). Fila: etiqueta + cartel en blanco. Abajo, regla de 18 px con dos marcadores y el punto blanco "ahora". Debajo, la cuenta regresiva ("185 m", 14/600 `#DDE2E7`). La regla no lleva números (ver P7). |
-| **Inminente (< 100 m)** | Igual que Aproximación, pero la cifra del cartel y la cuenta regresiva pasan a `#FFC24D`. No cambian tamaño ni posición. |
-| **FRENÁ** | Franja superior de 40 px en `#C62F26` con "FRENÁ" (Barlow 700 30 px, blanca, espaciado 0,04 em) a la izquierda y "CURVA 7" (22/700) a la derecha. Cuerpo oscuro: etiqueta + cartel 64 px (+ secundario). **Sin regla ni cuenta regresiva ni texto extra.** Se oculta pasado el vértice. |
+| **Aproximación** *(fase 5b)* | Encabezado: "CURVA 7" (22/700) y "248 → 96 km/h" (12 px, `#A9B2BC`). Debajo, la leyenda "◆ IA · ● VOS" (12 px, 700, naranja y azul). **Sin número grande.** Abajo, la barra de progreso (regla de 18 px con dos marcadores y el punto blanco "ahora") y la cuenta regresiva chica ("185 m", 14/600 `#DDE2E7`), que baja hasta 0. La regla no lleva números (ver P7). ~~Fila: etiqueta + cartel en blanco.~~ |
+| **Inminente (< 100 m)** *(fase 5b)* | Igual que Aproximación, pero la cuenta regresiva pasa a `#FFC24D`. No cambia tamaño ni posición. ~~La cifra del cartel~~ ya no existe. |
+| **FRENÁ** *(fase 5b)* | Franja superior de 40 px en `#C62F26` con "FRENÁ" (Barlow 700 30 px, blanca, espaciado 0,04 em) a la izquierda y "CURVA 7" (22/700) a la derecha. Cuerpo oscuro: leyenda "◆ IA · ● VOS" y "248 → 96 km/h". **Sin regla, ni cuenta regresiva, ni cartel.** Se oculta pasado el vértice. En el mismo instante se ve el **aviso de frenada** (2.1). |
 | **TOQUE** | Franja neutra `#3B4652` con "TOQUE" y "CURVA N". Cuerpo: etiqueta + velocidad mínima en 64 px con " km/h" a 30 px. Debajo, metros chicos (14/600 `#DDE2E7`, ej. "85 m"). **Nunca rojo.** |
 | **LEVANTÁ** | Igual que TOQUE con "LEVANTÁ" y **sin metros**. |
-| **Mini mapa** | Frenada = marcador lleno. Toque y levantá = **anillo vacío** (sin relleno, trazo 2,2). IA = rombo; vos = círculo. Todos con halo oscuro `#0C0E11` de 4,5 de ancho para superar 3:1 sobre el asfalto. Leyenda con las tres formas. |
-| **GRABANDO** (flag) | Chip "● GRABANDO" (`#4A1F1C` / `#FF9C94`, punto `#FF5A4E`) en el encabezado del mapa, en lugar del chip MOSTRAR. Siempre visible mientras `Grabando` sea verdadero. Los contadores (IA / VOS / MAPA) ocupan el lugar de la guía solo en SinDatos y Lejos. En cualquier otro estado manda la guía. Pie: "Parar de grabar: Bandeja › Modo › Mostrar." |
+| **Cabecera** *(fase 5b, reemplaza al mini mapa)* | Tarjeta chica con la pista y variante (Inter 12, `#A9B2BC`, se recorta con "…" **sin pisar los chips**), el chip de la clase y el chip de modo (MOSTRAR / GRABANDO). Debajo, los avisos fuera de banda ("No se pudo guardar…"). Fondo con el mismo alfa que el panel. ~~Mini mapa: marcadores llenos y anillos vacíos.~~ |
+| **GRABANDO** (flag) | Chip "● GRABANDO" (`#4A1F1C` / `#FF9C94`, punto `#FF5A4E`) en la cabecera, en lugar del chip MOSTRAR. Siempre visible mientras `Grabando` sea verdadero. Los contadores **IA / VOS** (sin MAPA, fase 5b) ocupan el lugar de la guía solo en SinDatos y Lejos. En cualquier otro estado manda la guía. Pie: "Parar de grabar: Bandeja › Modo › Mostrar." |
 | **SIN DATOS** | "SIN DATOS" (Barlow 700 30 px, `#C3CAD1`). Línea 1 (13 px, `#DDE2E7`): "No hay curvas guardadas para GT3 en Pista de ejemplo · GP." Línea 2 (13 px, `#A9B2BC`): "Bandeja › Modo › Grabar y da unas 10 vueltas con IA en pista." |
-| **Dos carteles distintos** | El principal (de la referencia principal) a 64 px con su etiqueta. El otro a 30 px a la derecha con la suya. IA = naranja con rombo; vos = azul con círculo. |
-| **Mismo cartel** | Un solo número. Etiqueta doble "◆ IA · ● VOS". |
-| **Desbloqueado** | Contorno discontinuo de 2 px `#5AA9FF` con separación de 3 px, más un chip "DESBLOQUEADO · arrastrá para mover". Opacidad forzada a 100 % mientras esté desbloqueado. |
+| ~~**Dos carteles distintos** / **Mismo cartel**~~ | *(Fase 5b)* Ya no se muestran carteles. Con IA y vos en la curva, la leyenda lleva las dos etiquetas y la barra los dos marcadores; con una sola referencia, una sola etiqueta y un solo marcador. |
+| **Desbloqueado** | Contorno discontinuo de 2 px `#5AA9FF` con separación de 3 px, más un chip "DESBLOQUEADO · arrastrá para mover". Opacidad forzada a 100 % mientras esté desbloqueado. La ventana del aviso de frenada también se ve (2.1). |
 
 **Reglas de Toque y Levantá [Criterio]:**
 
 - **Velocidad secundaria:** mostrarla solo si la diferencia con la principal es de 3 km/h o más. Si no, es ruido.
 - **Etiqueta única:** si la curva tiene una sola referencia, una sola etiqueta.
+
+### 2.1 Aviso de frenada (fase 5b)
+
+Símbolo de "freno" rojo en una **ventana overlay aparte** (la misma técnica que el panel: sin bordes, siempre arriba, click-through bloqueada), que aparece en el punto de frenado. Idea tomada de los avisos de frenada de los juegos de autos; el dibujo es **propio** (vector de WPF, ver abajo), no es ningún logo ni imagen de terceros.
+
+**Dibujo.** Círculo con signo de exclamación "!" y dos arcos a los costados, como el testigo del sistema de frenos de un auto. Cuadro de 120 × 120; centro (60, 60):
+
+| Pieza | Geometría | Trazo |
+|---|---|---|
+| Anillo | circunferencia r = 30 | 7 px |
+| Arco derecho / izquierdo | arco r = 47, de −40° a +40° (y su espejo) | 7 px, puntas redondas |
+| "!" | línea de (60, 43) a (60, 65) | 7 px, puntas redondas |
+| Punto del "!" | círculo r = 4,2 en (60, 77) | relleno |
+
+- **Color:** rojo `#E53935` sobre fondo **transparente**.
+- **Contorno oscuro fino:** `#0C0E11`, 2 px por lado (trazo 11 contra 7), para que el rojo se lea sobre cualquier fondo (cielo, asfalto, nieve). Primero se dibujan todos los contornos y después todo el rojo.
+- **Tamaño:** 120 px por defecto; escala **50–300 %** (60 a 360 px). Cuadrada, sin márgenes extra.
+- **Contraste [Evidencia, WCAG calculado]:** `#E53935` contra su contorno `#0C0E11` da **4,57 : 1**; contra blanco, 4,23 : 1; contra el cielo claro `#BFD8EE`, solo **2,87 : 1**. Por eso el contorno oscuro es obligatorio: separa el símbolo del fondo aunque el rojo solo no alcance. Hay que verlo sobre cielo claro y asfalto con el .exe real.
+- **Daltonismo:** no depende solo del rojo: la forma (círculo con "!" y arcos) y la franja con la palabra FRENÁ alcanzan.
+
+**Comportamiento** (lógica en `AvisoFrenada`, Core, con pruebas):
+
+| Regla | Valor |
+|---|---|
+| Aparece | Al entrar la guía en **FRENÁ** (el punto de frenado) |
+| Desaparece (lo primero que ocurra) | El pedal de freno del auto visto (`mBrake`) supera **0,15**; o pasan **1,5 s** (configurable, 1 a 2 s: `avisoDuracionS` y menú); o la guía deja de estar en FRENÁ (pasó el vértice) |
+| Repetición | **No vuelve** a aparecer en la misma curva en la misma pasada. Se rearma al cambiar de curva o al volver a Lejos / SIN DATOS (otra vuelta) |
+| Ya venías frenando | Si el pedal ya supera 0,15 al llegar al punto, no aparece |
+| Transición | Fundido de **80 ms** al aparecer y al desaparecer; sin parpadeo, pulso ni destello. Se anima a 60 Hz con el reloj, no con la telemetría (~27 Hz) |
+| Toque y Levantá | Nunca disparan el aviso |
+| Opción en el menú | "Aviso de frenada (símbolo)" activa o desactiva; "Probar aviso" lo muestra 1,5 s sin estar en pista (aunque esté desactivado); tamaño y duración también en el menú |
+| Con "Ocultar overlay" | El aviso también se apaga |
+
+**Ventana.** Bloqueada: invisible (opacidad 0), no recibe clics ni foco (`WS_EX_TRANSPARENT | NOACTIVATE | TOOLWINDOW`). Desbloqueada (**el mismo atajo `Ctrl+Alt+L` y el mismo ítem de la bandeja valen para las dos ventanas**): se ve el símbolo a media opacidad como mínimo sobre un fondo oscuro, con contorno azul discontinuo y un chip "AVISO"; se arrastra con el botón izquierdo y se cambia el tamaño con la rueda (pasos de 10 %) o con el agarre de la esquina. Posición (por monitor) y escala se guardan en `config.json` (`avisoPosiciones`, `avisoEscala`). Sin posición guardada: centrada en horizontal, a 30 % del alto del monitor.
+
+**Verificar con el .exe real:** que aparezca a tiempo y no estorbe; si 0,15 y 1,5 s son buenos valores; que el fundido de 80 ms no se note como parpadeo; el contraste del contorno; que la ventana transparente no robe el foco ni los clics de AMS2.
 
 **Estados no cubiertos por `PanelGuia` pero necesarios [Criterio]**
 
@@ -187,8 +236,8 @@ Todas las medidas están en px = DIP a 96 dpi. Con escala del usuario 75–150 %
 
 | Elemento | Fuente | Tamaño | Peso | Color |
 |---|---|---|---|---|
-| Cartel / velocidad principal | Barlow Condensed | 64 (line-height 0,95) | 700 | `#FFFFFF` (inminente `#FFC24D`) |
-| Unidad " m" / " km/h" | Barlow Condensed | 30 | 600 | `#A9B2BC` |
+| ~~Cartel~~ (fase 5b: solo la velocidad mínima de Toque y Levantá) | Barlow Condensed | 64 (line-height 0,95) | 700 | `#FFFFFF` |
+| Unidad " km/h" | Barlow Condensed | 30 | 600 | `#A9B2BC` |
 | Secundario | Barlow Condensed | 30 | 600 | `#DDE2E7` |
 | Palabra de estado (FRENÁ, TOQUE, LEVANTÁ) | Barlow Condensed | 30, espaciado 0,04 em | 700 | `#FFFFFF` |
 | "CURVA N" | Barlow Condensed | 22, espaciado 0,03 em | 700 | `#EEF1F4` |
@@ -197,7 +246,7 @@ Todas las medidas están en px = DIP a 96 dpi. Con escala del usuario 75–150 %
 | Texto de apoyo, leyendas, velocidades "248 → 96" | Inter | 12 | 400 | `#A9B2BC` |
 | Texto de SIN DATOS (explicación) | Inter | 13 | 400 | `#DDE2E7` / `#A9B2BC` |
 | Chips | Inter | 11 | 600 | ver 3.2 |
-| Contadores de GRABANDO | Barlow Condensed | 26 | 600 | `#EEF1F4` |
+| Contadores de GRABANDO (IA y VOS) | Barlow Condensed | 26 | 600 | `#EEF1F4` |
 
 **Cambio respecto del lienzo:** los textos de 10 y 11 px pasan a 12 px como mínimo. La regla pierde sus números de 10 px.
 
@@ -217,19 +266,21 @@ Todas las medidas están en px = DIP a 96 dpi. Con escala del usuario 75–150 %
 | Separación interna | 10 |
 | Franja de estado (FRENÁ, TOQUE, LEVANTÁ) | 40 de alto |
 | Regla | 18 de alto, marcadores de 4 × 24 |
-| Mapa | 296 × 190 |
-| Posición por defecto | Arriba a la derecha, margen 24 / 24 |
-| Posición y escala | Se recuerdan por monitor |
+| ~~Mapa~~ | *(fase 5b: no existe)* |
+| Cabecera (pista + chips) | ancho del panel, relleno 8 / 12 |
+| Aviso de frenada | 120 × 120 (escala 50–300 %), ventana aparte |
+| Posición por defecto | Arriba a la derecha, margen 24 / 24 (solo la primera vez; después se mueve a mano) |
+| Posición y escala | Se recuerdan por monitor (overlay y aviso por separado) |
 
-**Alto aproximado del conjunto** [Estimado sobre la ilustración, no medido en WPF]:
+**Alto aproximado del conjunto** *(fase 5b, sin mapa; estimado, no medido en WPF)*:
 
 | Estado | Alto aproximado |
 |---|---|
-| Mapa solo | ~260 |
-| Mapa + guía en Aproximación | ~470 (44 % del alto a 1080p) |
-| FRENÁ | ~410 |
+| Cabecera sola (Lejos: una línea + cabecera) | ~100 |
+| Aproximación (encabezado, leyenda, barra, metros + cabecera) | ~210 |
+| FRENÁ (franja 40 + cuerpo + cabecera) | ~170 |
 
-**Es mucho.** Propuesta: mapa **colapsable** con opción "mapa compacto" (escala 0,75 → 222 × 142), apagado en carrera si molesta. Es una preferencia, no un cambio de default.
+~~Mapa + guía ~470 (44 % del alto a 1080p).~~ Sin el mapa el conjunto ocupa menos de la mitad.
 
 **Por qué no tapa el HUD [Supuesto, no verificado].** Supuse esta disposición del HUD de AMS2:
 
@@ -239,8 +290,7 @@ Todas las medidas están en px = DIP a 96 dpi. Con escala del usuario 75–150 %
 
 Con eso, arriba a la derecha queda libre. **Riesgo:** AMS2 puede mostrar ahí un cronómetro de vuelta o un mapa de pista según la configuración. Por eso:
 
-- La posición es arrastrable.
-- Hay cuatro atajos de esquina en el menú de bandeja.
+- La posición es arrastrable (fase 5b: se sacaron los atajos de esquina del menú; se mueve a mano).
 - La verificación con el `.exe` real (sección 5) incluye una captura con el HUD completo activo.
 
 ### 3.3 Colores y opacidades
@@ -248,12 +298,13 @@ Con eso, arriba a la derecha queda libre. **Riesgo:** AMS2 puede mostrar ahí un
 | Rol | Valor |
 |---|---|
 | Fondo del panel de guía | `rgba(12,14,17,0.88)` |
-| Fondo del mapa | `rgba(12,14,17,0.84)` |
+| ~~Fondo del mapa~~ | *(fase 5b: la cabecera usa el mismo alfa que el panel)* |
 | Rango del slider "Opacidad" | Alfa del fondo **0,80–0,95**, mapeado desde 0–100 % del slider. El texto no se atenúa nunca. |
 | Naranja IA | `#FF9A3D` |
 | Azul vos | `#5AA9FF` |
 | Ámbar inminente | `#FFC24D` |
-| Rojo FRENÁ (franja) | `#C62F26` (antes `#D93A30` sobre todo el panel) |
+| Rojo FRENÁ (franja) | `#C62F26` (antes `#D93A30` sobre todo el panel). Única opción (fase 5b) |
+| Rojo del aviso de frenada | `#E53935`, contorno `#0C0E11` de 2 px por lado |
 | Franja neutra (Toque, Levantá) | `#3B4652` |
 | Fondo de regla / base de regla | `#232A31` / `#33414E` |
 | Marcas de regla | `#4A5561` |
@@ -262,8 +313,6 @@ Con eso, arriba a la derecha queda libre. **Riesgo:** AMS2 puede mostrar ahí un
 | Chip MOSTRAR | `#1E3A2A` / `#8EE0A9` |
 | Chip GRABANDO | `#4A1F1C` / `#FF9C94`, punto `#FF5A4E` |
 | Chip DESBLOQUEADO | `#17304D` / `#8CC3FF` |
-| Trazo del mapa | `#C3CAD1` sobre borde `#56616C` |
-| Halo de marcadores | `#0C0E11`, 4,5 de ancho |
 
 ### 3.4 Bloqueo, desbloqueo y bandeja
 
@@ -277,6 +326,7 @@ Con eso, arriba a la derecha queda libre. **Riesgo:** AMS2 puede mostrar ahí un
 - Se quita `WS_EX_TRANSPARENT`. Se mantiene `NOACTIVATE` si se puede.
 - Contorno discontinuo azul y chip (pantalla 12).
 - Se arrastra con el botón izquierdo y se escala con la rueda o con el control del menú.
+- **Fase 5b:** lo mismo vale para la ventana del aviso de frenada (2.1): un solo atajo y un solo ítem bloquean o desbloquean las dos.
 - Opacidad al 100 %.
 
 **Cómo se entiende sin manual [Criterio]:**
@@ -286,18 +336,21 @@ Con eso, arriba a la derecha queda libre. **Riesgo:** AMS2 puede mostrar ahí un
 - Atajo global configurable (propuesta: `Ctrl+Alt+L`).
 - El ícono de bandeja cambia con el estado (candado cerrado / abierto). En Windows 11 el ícono suele quedar oculto en el desplegable: avisarlo en el globo.
 
-**Menú de bandeja, orden propuesto:**
+**Menú de bandeja, orden vigente (fase 5b):**
 
-1. Bloquear overlay (con marca).
+1. Bloquear overlay (con marca y el atajo).
 2. Modo: Mostrar / Grabar.
 3. Referencia principal: IA / Vos.
-4. Posición: cuatro esquinas.
-5. Tamaño y opacidad.
-6. Mapa compacto.
-7. Pitido.
-8. Abrir carpeta de datos.
-9. Diagnóstico.
-10. Salir.
+4. Tamaño del overlay y Opacidad del fondo.
+5. Aviso de frenada (marca), Probar aviso, Tamaño del aviso (50–300 %), Duración máxima del aviso (1,0 / 1,5 / 2,0 s).
+6. Pitido al frenar (marca) y Probar pitido.
+7. Atajo de bloqueo.
+8. Ocultar / Mostrar overlay.
+9. Datos: Abrir carpeta de datos, Abrir carpeta de capturas, Exportar datos…, Importar datos….
+10. Diagnóstico….
+11. Salir.
+
+~~Posición: cuatro esquinas, Mapa compacto, Mostrar mapa, Rojo suave~~: sacados.
 
 Con el overlay bloqueado, **no hay forma de hacer clic sobre él**. La bandeja y el atajo son la única vía. Eso es lo que más hay que probar (sección 5).
 
@@ -321,10 +374,11 @@ La interfaz **no agrega su propia lógica de estado**. Solo dibuja.
 | Paso Aproximación → Inminente | Cambio de color instantáneo. Sin animación de tamaño. |
 | Aparición de la franja FRENÁ | Fundido de 80 ms. **Sin pulso, sin destello, sin parpadeo.** |
 | Actualización de números | Máximo 10 Hz. Ancho de cifras fijo. |
-| Cuenta regresiva | Metros enteros; en Lejos, redondeados a 10. |
+| Cuenta regresiva | Metros enteros, decreciente hasta 0; en Lejos, redondeados a 10. |
 | Duración de FRENÁ en pantalla | Desde el punto de frenado hasta el vértice (unos segundos). Sin límite adicional. |
+| Aviso de frenada | Fundido de 80 ms, tope de 1,5 s (2.1) |
 
-**Rojo no invasivo.** En el lienzo todo el panel (320 × ~200) se pone rojo `#D93A30`. Es mucha superficie roja en el campo visual periférico, justo cuando más atención hay que prestar a la pista. Propuesta: **solo la franja superior de 40 px en rojo**, y el cuerpo sigue oscuro. Alternativa si aun así molesta: opción "Rojo suave" que usa un contorno rojo de 3 px y una franja de `#5A1D19` con texto `#FF9C94`.
+**Rojo no invasivo.** En el lienzo todo el panel (320 × ~200) se pone rojo `#D93A30`. Es mucha superficie roja en el campo visual periférico, justo cuando más atención hay que prestar a la pista. Propuesta: **solo la franja superior de 40 px en rojo**, y el cuerpo sigue oscuro. ~~Alternativa: opción "Rojo suave"~~ (contorno de 3 px y franja `#5A1D19`): **sacada en la fase 5b** por decisión del usuario; queda la franja roja de 40 px por defecto.
 
 ---
 
@@ -336,8 +390,8 @@ La interfaz **no agrega su propia lógica de estado**. Solo dibuja.
 | P2 | **Bloquea** | Las fuentes dependen de Google Fonts. En WPF no cargan: el overlay saldría con otra tipografía y distintos anchos. | Embeber Barlow Condensed e Inter como recursos. Respaldo `Bahnschrift SemiCondensed` y `Segoe UI`. Cifras de ancho fijo. |
 | P3 | **Importante** | El slider de opacidad (0,4–1) atenúa también el texto. Por debajo de 0,85 el contraste cae de 4,5:1 sobre blanco. | Aplicar la opacidad solo al fondo, con rango 0,80–0,95 (3.3). |
 | P4 | **Importante** | Naranja y azul son iso-luminantes (ΔL\* 0,8–10). No se distinguen por brillo. | Forma redundante: rombo = IA, círculo = vos, en todo el overlay (1.3). |
-| P5 | **Importante** | El panel rojo completo es invasivo. | Franja roja de 40 px, cuerpo oscuro (3.5). Opción "Rojo suave". |
-| P6 | **Importante** | Overlay alto: ~470 px a 1080p (44 % del alto). Puede tapar HUD según la configuración. | Guía arriba, mapa abajo, mapa colapsable y compacto, posición arrastrable con atajos de esquina (3.2). |
+| P5 | **Importante** | El panel rojo completo es invasivo. | Franja roja de 40 px, cuerpo oscuro (3.5). ~~Opción "Rojo suave"~~ (sacada en 5b). |
+| P6 | **Resuelto en 5b** | Overlay alto: ~470 px a 1080p (44 % del alto). | Sin mini mapa: queda menos de la mitad. Posición arrastrable (3.2). |
 | P7 | **Importante** | Textos de 10 y 11 px (ejes de regla, leyendas, etiquetas). Eje de 10 px = 4,17:1 sobre blanco en el mapa. | Mínimo 12 px. Quitar los números de la regla, que queda como indicador. |
 | P8 | **Importante** | SIN DATOS y GRABANDO no dicen cómo actuar con precisión (dónde cambiar de modo, cuándo parar). | Textos de las pantallas 9 y 10. |
 | P9 | **Importante** | Con el overlay bloqueado no se puede hacer clic; la bandeja suele estar oculta en Windows 11. | Atajo global, globo en el primer arranque, ícono de estado (3.4). |
@@ -347,6 +401,9 @@ La interfaz **no agrega su propia lógica de estado**. Solo dibuja.
 | P13 | Menor | La regla muestra 100/200/300 m fijos, pero la ventana va de 120 a 400 m. | Escala de la regla = `VentanaM` del `PanelGuia`. |
 | P14 | Menor | El estado "AMS2 no detectado" y "versión no compatible" no tienen pantalla. | Usar la tarjeta de SIN DATOS con los textos de la sección 2. |
 | P15 | Menor | Falta definir si la velocidad secundaria de Toque aparece siempre. | Solo si difiere 3 km/h o más. |
+| P16 | Pendiente (5b) | Cambiar de modo (Grabar / Mostrar) obliga a ir a la bandeja. | **No implementado.** Previsto: botón en la cabecera del HUD (el chip de modo) que alterne el modo, activo solo con el overlay desbloqueado. |
+| P17 | Pendiente (5b) | Con el overlay desbloqueado no hay forma de cerrarlo sin la bandeja. | **No implementado.** Previsto: "✕" y menú contextual (clic derecho) sobre el overlay desbloqueado con Bloquear, Ocultar y Salir. |
+| P18 | Menor (5b) | El nombre de la pista se recortaba por el chip de la clase. | **Arreglado** (era trivial): la cabecera usa dos columnas, el nombre ocupa el espacio libre, se recorta con "…" y muestra el nombre completo al pasar el mouse. Falta verlo en pantalla. |
 
 ---
 
@@ -354,17 +411,17 @@ La interfaz **no agrega su propia lógica de estado**. Solo dibuja.
 
 Material necesario: capturas de pantalla con AMS2 en Borderless, HUD completo activo y overlay encima.
 
-1. **Lectura en 0,5 s:** que el cartel, el nombre de la curva y de quién es cada color se lean con un vistazo. Con el cartel de 200 m, con dos carteles distintos y con el mismo cartel.
+1. **Lectura en 0,5 s:** que la barra de progreso, el nombre de la curva y de quién es cada color se lean con un vistazo (fase 5b: ya no hay cartel).
 2. **Contraste real:** sobre cielo, pianos, nieve o lluvia, con el slider en 0,80 y en 0,95. Medir con el color de píxel real de las capturas.
 3. **HUD:** que arriba a la derecha no tape tiempos, posiciones, retrovisor virtual ni mapa. Probar con varias configuraciones de HUD y con 1080p, 1440p y 4K.
 4. **Fuentes:** que se vean Barlow Condensed e Inter y no el respaldo; que las cifras no se muevan de ancho.
 5. **Parpadeo:** grabar 10 s de video pasando por Lejos, Aproximación, Inminente, FRENÁ y de vuelta, incluyendo una chicane. Contar cambios de estado por segundo.
-6. **Rojo de FRENÁ:** que la franja roja no distraiga ni resulte molesta. Comparar con "Rojo suave".
+6. **Rojo de FRENÁ:** que la franja roja no distraiga ni resulte molesta. *(Fase 5b: ya no hay "Rojo suave" para comparar.)* Ver también el aviso de frenada (2.1).
 7. **Bloqueo y clics:** con el overlay bloqueado, que los clics y las teclas lleguen a AMS2 y que no robe el foco. Con el overlay desbloqueado, que al arrastrar no minimice ni cambie el modo de AMS2.
 8. **Always on Top:** que se mantenga encima de AMS2 en Borderless, sin PowerToys.
 9. **Bandeja y atajo:** que el ícono se encuentre en Windows 11, que el atajo no choque con los botones de la base Moza ni con atajos del juego, y que el globo de primer arranque se vea.
 10. **Daltonismo:** pasar las capturas reales por un simulador y confirmar que forma y etiqueta alcanzan.
-11. **Mapa:** anillos y rombos distinguibles a escala real, y marcadores de IA y de vos separados.
+11. ~~Mapa~~ *(fase 5b)*: la barra de progreso con el rombo (IA) y el círculo (vos) se distingue a escala real, y los dos marcadores no se tapan.
 12. **Textos de SIN DATOS y GRABANDO:** que se entiendan sin documentación.
 
 ---

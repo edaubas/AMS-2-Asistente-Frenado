@@ -15,7 +15,7 @@ Decisiones ya tomadas:
 - **Datos:** por pista + variante + clase, no por modelo de auto.
 - **Dos referencias por curva:** la mediana de la IA de tu clase y tu propia mediana.
 - **Mapa propio:** se arma con las posiciones de los autos mientras se graba. No hay mapas descargables alineados con la telemetría.
-- **Overlay:** una ventana siempre visible con mini mapa y panel de aproximación. Se mueve y se redimensiona; bloqueada, los clics la atraviesan.
+- **Overlay:** una ventana siempre visible con el panel de aproximación (**fase 5b: sin mini mapa**; más una ventana aparte con el aviso de frenada). Se mueve y se redimensiona; bloqueada, los clics la atraviesan.
 - **Avisos:** solo visuales. El pitido es opcional y viene apagado. Sin datos, muestra "SIN DATOS". No hay aviso en vivo de "frenaste X m antes".
 - **Diseño visual:** aprobado en el lienzo "AMS2 Asistente de Frenado – Overlay" (Claude Design).
 
@@ -32,7 +32,7 @@ flowchart LR
     Lector -->|modo Mostrar| Guia["Guía<br/>próxima curva"]
     Grabador --> Datos["Datos JSON<br/>curvas y mapa por clase"]
     Datos -->|lee| Guia
-    Guia --> Overlay["Overlay<br/>mini mapa + panel"]
+    Guia --> Overlay["Overlay<br/>panel + aviso de frenada"]
     Bandeja["Bandeja<br/>menú de Windows"] -->|modo y bloqueo| Overlay
 ```
 
