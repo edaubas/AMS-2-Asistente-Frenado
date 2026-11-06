@@ -565,7 +565,7 @@ Los estados son los de siempre (ver 2 y 5c); cambia el dibujo, no la lógica. Ve
 
 ### 7.4 Barra de botones (pedidos C y D)
 
-Orden, de izquierda a derecha: **⇄ modo**, **⚙ ajustes**, **📌 fijar**, separador, **✕ cerrar**. A la izquierda de la fila, la etiqueta **FIJO / LIBRE** y la tecla **Ctrl+Alt+L** (siempre visible; muestra el atajo configurado real).
+Orden, de izquierda a derecha: **⇄ modo**, **⚙ ajustes**, **📌 fijar**, separador, **✕ cerrar**. ~~A la izquierda de la fila, la etiqueta FIJO / LIBRE y la tecla Ctrl+Alt+L.~~ **Correcciones 1: sin rótulo ni tecla junto a la barra** (el usuario los marcó para sacar). El estado fijado / libre se ve solo en el ícono del pin y en su tooltip, que conserva el atajo configurado real.
 
 | Botón | Reposo | Acción | Tooltip |
 |---|---|---|---|
@@ -578,10 +578,10 @@ Orden, de izquierda a derecha: **⇄ modo**, **⚙ ajustes**, **📌 fijar**, se
 
 | Estado | Ícono | Fondo / borde | Etiqueta | Tooltip |
 |---|---|---|---|---|
-| Fijado | Chincheta **vertical, rellena** | `#3A1614` / `rojo`, ícono `rojo-et` | FIJO | "Fijado: no se puede mover ni cambiar de tamaño. Clic para liberar (Ctrl+Alt+L)" |
-| Libre | Chincheta **inclinada 45°, solo contorno** | `sup` / `borde-f` | LIBRE (azul) | "Libre: arrastrá para mover, rueda para el tamaño. Clic para fijar (Ctrl+Alt+L)" |
+| Fijado | Chincheta **vertical, rellena** | `#3A1614` / `rojo`, ícono `rojo-et` | *(ninguna)* | "Fijado: no se puede mover ni cambiar de tamaño. Clic para liberar (Ctrl+Alt+L)" |
+| Libre | Chincheta **inclinada 45°, solo contorno** | `sup` / `borde-f` | *(ninguna)* | "Libre: arrastrá para mover, rueda para el tamaño. Clic para fijar (Ctrl+Alt+L)" |
 
-La forma (relleno y ángulo) y la palabra FIJO / LIBRE llevan el estado; el color solo acompaña. En Libre se mantienen el contorno azul discontinuo y el agarre de tamaño, y el cartel grande de la fase 5b se reemplaza por un chip de una línea arriba: "LIBRE · arrastrá para mover · rueda: tamaño". Mientras está libre el fondo va al 100 %, como antes.
+La forma (relleno y ángulo) lleva el estado; el color solo acompaña. **Sin texto suelto de estado** (correcciones 1): ni la palabra FIJO / LIBRE, ni la tecla, ni el chip "LIBRE · arrastrá para mover · rueda: tamaño" (antes arriba, al desbloquear). En Libre se mantienen el contorno azul discontinuo y el agarre de tamaño. Mientras está libre el fondo va al 100 %, como antes.
 
 **Qué significa "fijado" [Evidencia, decisión del usuario].** Solo que no se puede mover ni cambiar de tamaño con mouse, rueda o agarre. El engranaje, el pin, el modo y la ✕ funcionan siempre. El resto del overlay deja pasar los clics al juego.
 
@@ -605,7 +605,7 @@ Se abre con el engranaje, en una ventana propia **opaca** (no depende de la opac
 | | | Botón **Ocultar overlay** | — | Ver P23 |
 | Der. 1 | **Aviso de frenada** | Interruptor + botón **Probar** | — | — |
 | | | Deslizador **Tamaño del aviso** | 50 a 300 %, paso 10 | "100 %" |
-| | | Deslizador **Anticipación del aviso** | **0,0 a 2,0 s, paso 0,1** | "0,8 s" + ayuda (7.6) |
+| | | Deslizador **Anticipación (pitido y símbolo)** *(antes "Anticipación del aviso")* | **0,0 a 2,0 s, paso 0,1** | "0,8 s" + ayuda (7.6) |
 | | | Deslizador **Duración máxima** | 1,0 a 2,0 s, paso 0,1 | "1,5 s" |
 | Der. 2 | **Pitido** | Interruptor + botón **Probar** | — | — |
 | Der. 3 | **Atajo** | Fila "Atajo de bloqueo ›" | 4 sugerencias; "Otro: editá `atajo` en config.json" | La tecla actual |
@@ -619,7 +619,7 @@ Se abre con el engranaje, en una ventana propia **opaca** (no depende de la opac
 
 | Dato | Valor |
 |---|---|
-| Etiqueta | **Anticipación del aviso** |
+| Etiqueta | **Anticipación (pitido y símbolo)** *(correcciones 1: "del aviso" se leía como solo el símbolo; vale para el pitido y el símbolo; igual en el submenú de la bandeja)* |
 | Control | Deslizador, 0,0 a 2,0 s, paso 0,1, valor numérico visible ("0,8 s"), marcas cada 0,5 s |
 | Defecto | **0,0 s** |
 | Ayuda | "Segundos antes del punto de frenado en que suena el pitido y el símbolo llega al 100 %. 0 = justo en el punto." |
@@ -753,7 +753,7 @@ Los pendientes P16 (botón de modo) y P17 (✕ / menú sobre el overlay) de la 5
 Detalles de B:
 
 - **Ventana de botones** (`VentanaBarra`): ≈ 140 × 32 con los cuatro botones y el separador; solo ese rectángulo bloquea clics del juego. `Topmost`, `ShowActivated=false`, `WS_EX_NOACTIVATE \| TOOLWINDOW`, **sin** `AllowsTransparency` (es un rectángulo: se dibuja por hardware y la prueba de impacto es trivial), con la ventana del overlay como `Owner` para que quede encima.
-- **La etiqueta FIJO / LIBRE y la tecla** viven en la ventana grande (dejan pasar los clics). Al confirmar la ✕ la ventana de botones se agranda a la fila completa (292 × 32) durante la pregunta.
+- ~~La etiqueta FIJO / LIBRE y la tecla viven en la ventana grande.~~ Ya no existen (correcciones 1). Al confirmar la ✕ la ventana de botones se agranda a la fila completa (292 × 32) durante la pregunta.
 - **Posición:** la barra va **arriba** del overlay a propósito: su desfase respecto de la esquina superior de la ventana grande es fijo aunque la tarjeta crezca o se achique, así que la ventana de botones solo se reubica al mover, cambiar el tamaño o cambiar el DPI (acciones explícitas), no en cada cambio de estado. Si la barra estuviera abajo habría que moverla en cada estado y se vería un salto entre las dos ventanas.
 - **DPI:** reposicionar con `SetWindowPos` y `SWP_NOACTIVATE`; en monitores con DPI distinto, medir en píxeles físicos [sin verificar].
 - **Foco:** `NOACTIVATE` hace que un clic en los botones no le saque el foco a AMS2. A cambio, el teclado no llega al menú (P24). Quitar `NOACTIVATE` para tener teclado robaría el foco del juego: no recomendado.
@@ -789,12 +789,28 @@ Detalles de B:
 
 Lo que se hizo distinto o además de lo dibujado:
 
-- **Rampa del símbolo.** No se fijó en 2,0 s: se conserva `avisoRampaS` de la 5d (1,0 a 3,0 s, defecto 2,0) como deslizador "Inicio de la rampa (avanzado)" en la columna del aviso. Por eso el menú mide unos 50 px más que lo dibujado. `avisoAnticipacionS` se mantiene. Decisión a confirmar con el usuario.
+- **Rampa del símbolo.** No se fijó en 2,0 s: se conserva `avisoRampaS` de la 5d (1,0 a 3,0 s, defecto 2,0) como deslizador "Aparición del símbolo" (correcciones 1: antes "Inicio de la rampa (avanzado)"; sin "avanzado" y sin la palabra "rampa" en ningún texto visible) en la columna del aviso, con la ayuda "Cuántos segundos antes empieza a verse el símbolo, de a poco. Por defecto 2,0 s.". Por eso el menú mide unos 50 px más que lo dibujado. `avisoAnticipacionS` se mantiene. Decisión a confirmar con el usuario.
 - **Escala inversa (7.4).** Debajo de 0,875 de escala del overlay la barra se queda en 0,875: se garantiza el área clicable de 28 px reales (32 × 0,875); el dibujo de 28 puede bajar a 24,5.
 - **Popover de modo.** Es la misma ventana de botones, que crece hacia abajo (220 de ancho), no una ventana aparte.
 - **Pastilla (P23).** Con el overlay oculto la ventana grande sigue abierta con el contenido colapsado (es el `Owner` de la barra) y queda la pastilla de 32 × 32 con el engranaje, donde estaba el hueco de la barra; el menú ofrece "Mostrar overlay".
-- **Posición de la barra.** Se recalcula en cada tick a partir del hueco `ReservaBarra` de la cabecera (no hay eventos de movimiento que se puedan perder). Con el chip LIBRE la cabecera crece y la barra baja con ella.
+- **Posición de la barra.** Se recalcula en cada tick a partir del hueco `ReservaBarra` de la cabecera (no hay eventos de movimiento que se puedan perder). Con el chip LIBRE quitado (correcciones 1) la cabecera ya no crece al liberar.
 - **Espaciado de títulos.** WPF no tiene espaciado de letras: se aproxima con *hair spaces* (U+200A) en FRENÁ, TOQUE, LEVANTÁ, SIN DATOS y los títulos del menú. Sin verificar cómo lo resuelven Barlow Condensed y el respaldo.
 - **Colores.** Solo los tokens de 7.2; el contraste se recalculó con `docs/ui/contraste_fase6.py` (sin cambios). Presionado del botón rojo (`#A82720`) es más oscuro que el rojo base, con texto blanco.
 - **Contorno azul del modo libre.** Rectangular (sin la esquina cortada).
 
+### 7.14 Correcciones de errores 1 (rama `correcciones-ui-1`) [compila, sin ejecutar]
+
+Cambios pedidos por el usuario tras probar el .exe de la fase 6 (todos aprobados):
+
+| # | Cambio | Dónde |
+|---|---|---|
+| 1 | Se quitan: el rótulo "FIJO / LIBRE" con la tecla junto a la barra, el chip "LIBRE · arrastrá para mover · rueda: tamaño" y el "(avanzado)" del deslizador. El estado se lee en el pin (relleno o contorno, color, inclinación) y en su tooltip ("Fijado: … (Ctrl+Alt+L)" / "Libre: … (Ctrl+Alt+L)"). Se mantiene el contorno discontinuo azul y el agarre. | 7.4 |
+| 2 | "Anticipación del aviso" pasa a **"Anticipación (pitido y símbolo)"** en el menú y en la bandeja. Ayuda: "Segundos antes del punto de frenado en que suena el pitido y el símbolo llega al 100 %. 0 = justo en el punto." | 7.5, 7.6 |
+| 3 | "Inicio de la rampa (avanzado)" pasa a **"Aparición del símbolo"** (bandeja: igual). Ayuda: "Cuántos segundos antes empieza a verse el símbolo, de a poco. Por defecto 2,0 s.". La clave interna `avisoRampaS` no cambia. | 7.5 |
+| 4 | El chip del modo (MOSTRAR / GRABANDO / GRABANDO · SOLO VOS) sigue siempre el modo configurado, con o sin AMS2 (también en "esperando AMS2", "versión no compatible" y "entrá a pista"). | cabecera (5b) |
+| 5 | La ventana de ajustes se mueve arrastrando su **cabecera** (título y zona vacía, también en Datos y Atajo). Cursor `SizeAll` en la cabecera; los botones ✕ y ‹ siguen siendo botones. Queda siempre dentro del área de trabajo del monitor bajo el cursor. | 7.5 |
+| 6 | Ícono propio: cuadrado rojo `#C62F26` de esquinas redondeadas (radio 48 de 256), "2" grande blanco y cinta oscura `#0C0E11` con borde blanco y "AF" (Barlow Condensed Bold a trazos). Fuente: `src/AMS2Frenado.App/Recursos/icono.svg`. | nuevo |
+
+**Ventana de ajustes movible.** La ventana es NOACTIVATE (nunca toma foco): `DragMove` y `WM_NCLBUTTONDOWN`/`HTCAPTION` arrancan el bucle modal de movimiento del sistema, poco fiable sobre una ventana sin activar y con `AllowsTransparency`. Se hace a mano: captura de mouse WPF en la cabecera, posición del cursor con `GetCursorPos` (absoluta, para que mover la ventana no realimente el cálculo) y `SetWindowPos` con `SWP_NOACTIVATE`. Límites: la ventana entera dentro del área de trabajo del monitor donde está el cursor (se puede pasar de un monitor a otro). La última posición se recuerda durante la sesión y se guarda en `config.json` (`ajustesPosicion`, DIP de pantalla, `null` = automática junto a la barra); se lleva dentro del monitor al usarla. El cálculo automático (al abrir y la corrección con el alto real) solo corre si el usuario no eligió posición; un clic en la cabecera sin mover no cuenta como elegir. Si al cambiar de página el menú crece y se sale de pantalla, se lo sube lo justo. Lógica en `ArrastreVentana` y `PosicionAjustes` (Core, con pruebas).
+
+**Ícono.** Se usa en: `ApplicationIcon` del .exe (7 tamaños: 16, 24, 32, 48, 64, 128, 256, PNG dentro del ICO), `Icon` de la ventana de diagnóstico y la bandeja. El menú, el overlay, la barra y el aviso no tienen barra de título ni botón en la barra de tareas: no necesitan ícono. **Bandeja:** se conserva la idea candado cerrado / abierto como un indicador de 16 px (disco oscuro con candado minimo) abajo a la derecha del ícono; a 16 px reales (100 % de escala) se lee como un punto, por eso el estado también está en el tooltip del ícono y en el pin. Tamaños chicos: 16, 24 y 32 usan solo el "2" (AF se omite: a 32 px mediría ~5 px); 48 y 64 llevan una cinta más alta con AF más grande; 128 y 256, el diseño completo. Vista previa: `docs/ui/icono-vista-previa.png`. Reproducir: `python3 tools/icono/generar_icono.py` (fonttools, Pillow, Node + playwright). No copia ningún logo de terceros (AMS2, Reiza, Content Manager): solo comparte el concepto genérico "cuadrado rojo con número grande y etiqueta chica".

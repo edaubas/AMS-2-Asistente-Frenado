@@ -59,6 +59,7 @@ Cuando terminen los ajustes de `fase-5c-ajustes` y se corrijan sus errores, se a
 
 - Probar todo en Windows con AMS2 (`docs/FASE-6-PRUEBA.md`): clics con el overlay fijado, orden en Z de las tres ventanas, foco, DPI, textura sin moiré, lectura en 0,5 s y alto del conjunto con el HUD completo (P29).
 - Confirmar con el usuario: pastilla al ocultar el overlay (P23), tamaño y opacidad activos con el overlay fijado (P27), "Probar aviso" con rampa + pitido + símbolo (P34), duración contada desde el punto y no desde el pitido (P33).
-- Rampa del símbolo: el spec proponía fijarla en 2,0 s; se conservó configurable (1,0 a 3,0 s) como opción avanzada del menú. Decidir si se quita.
+- Aparición del símbolo (`avisoRampaS`): el spec proponía fijarla en 2,0 s; se conservó configurable (1,0 a 3,0 s) y ya no se rotula "avanzada". Decidir si se quita.
+- Correcciones 1 sin ejecutar en Windows: ventana de ajustes movible, ícono (exe, diagnóstico, bandeja) y chip de modo sin juego (`docs/FASE-6-PRUEBA.md`, sección "Correcciones 1").
 - Tooltips y teclado (Esc) en ventanas sin activación: pueden no funcionar (P24, P31).
 - Release por tag.

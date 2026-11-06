@@ -48,11 +48,21 @@ Dos partes, separadas a propósito:
 Spec: `docs/UI-SPEC.md` sección 7 y `docs/ui/pantallas-fase6.png`. **Todo lo de ventanas compila pero no se ejecutó.**
 
 - **Estética:** tarjetas oscuras con textura de carbono (un `DrawingBrush` congelado de 6×6 con una diagonal al 4 %), esquina cortada de 14 px a 45°, acento rojo, títulos condensados (Barlow Condensed), barra segmentada de 16 y cifras de GRABANDO separadas por ":". Sin logos ni imágenes de terceros. El fondo mínimo sube de 0,80 a 0,85 (`opacidad`; un `config.json` viejo se corrige solo).
-- **Barra de botones arriba del panel:** ⇄ modo (popover de 3 opciones, nunca cicla), ⚙ ajustes, chincheta (fijar / liberar, con la palabra FIJO / LIBRE y la tecla) y ✕ (cerrar con doble paso en el lugar, se cancela solo a los 5 s). "Fijado" solo significa no mover ni cambiar el tamaño: **los botones se usan siempre**. Son una **ventana chica aparte** (`VentanaBarra`, sin click-through y sin robar el foco); la ventana grande conserva el click-through de la 5c. No se usa `WM_NCHITTEST`: `HTTRANSPARENT` no cruza procesos y AMS2 es otro.
-- **Menú de configuración (⚙):** ventana propia y opaca de 624 px en dos columnas (`VentanaMenu`), con **todas** las opciones de la bandeja: modo, referencia principal, fijar, tamaño, opacidad, ocultar overlay, aviso (activar, probar, tamaño, anticipación, duración, inicio de la rampa), pitido (activar, probar), atajo, datos, diagnóstico y salir. "Datos" y "Atajo" son páginas internas. Deslizadores en vivo; `config.json` se guarda 500 ms después del último cambio. Solo mouse; se cierra a los 15 s con el mouse afuera. La bandeja queda como respaldo con las mismas opciones.
+- **Barra de botones arriba del panel:** ⇄ modo (popover de 3 opciones, nunca cicla), ⚙ ajustes, chincheta (fijar / liberar; el estado se ve en el ícono y en su tooltip, sin rótulo de texto) y ✕ (cerrar con doble paso en el lugar, se cancela solo a los 5 s). "Fijado" solo significa no mover ni cambiar el tamaño: **los botones se usan siempre**. Son una **ventana chica aparte** (`VentanaBarra`, sin click-through y sin robar el foco); la ventana grande conserva el click-through de la 5c. No se usa `WM_NCHITTEST`: `HTTRANSPARENT` no cruza procesos y AMS2 es otro.
+- **Menú de configuración (⚙):** ventana propia y opaca de 624 px en dos columnas (`VentanaMenu`), con **todas** las opciones de la bandeja: modo, referencia principal, fijar, tamaño, opacidad, ocultar overlay, aviso (activar, probar, tamaño, anticipación del pitido y del símbolo, duración, aparición del símbolo), pitido (activar, probar), atajo, datos, diagnóstico y salir. "Datos" y "Atajo" son páginas internas. Deslizadores en vivo; `config.json` se guarda 500 ms después del último cambio. Solo mouse; se cierra a los 15 s con el mouse afuera. La bandeja queda como respaldo con las mismas opciones.
 - **Ocultar overlay** deja una pastilla de 32×32 con el engranaje; desde ahí el menú ofrece "Mostrar overlay".
 - **Lógica con pruebas (Core):** `BarraBotones`, `ConfirmacionTemporizada`, `MenuConfig` (rangos, pasos, coma decimal, autocierre, guardado diferido), escala inversa, posición del menú. Los 6 textos de SIN DATOS / GRABANDO que nombraban la "Bandeja" ahora apuntan a los botones del overlay.
-- **Rampa del símbolo:** se conserva la de la 5d (`avisoRampaS`, 1,0 a 3,0 s, por defecto 2,0); el spec proponía fijarla en 2,0 s. En el menú aparece como opción avanzada. `avisoAnticipacionS` se mantiene (0 a 2,0 s).
+- **Rampa del símbolo:** se conserva la de la 5d (`avisoRampaS`, 1,0 a 3,0 s, por defecto 2,0); el spec proponía fijarla en 2,0 s. En el menú es "Aparición del símbolo" (la palabra "rampa" ya no aparece en textos visibles). `avisoAnticipacionS` se mantiene (0 a 2,0 s).
+
+## Correcciones tras probar la fase 6 (rama `correcciones-ui-1`)
+
+Detalle en `docs/UI-SPEC.md` 7.14 y qué volver a probar en `docs/FASE-6-PRUEBA.md`. Todo lo de ventanas e ícono **compila pero no se ejecutó**.
+
+- Sin el rótulo FIJO / LIBRE con la tecla, sin el chip "LIBRE · arrastrá para mover · rueda: tamaño" y sin "(avanzado)".
+- "Anticipación (pitido y símbolo)" y "Aparición del símbolo" (antes "Anticipación del aviso" e "Inicio de la rampa"), en el menú y en la bandeja.
+- **Bug del chip de modo:** ahora MOSTRAR / GRABANDO / GRABANDO · SOLO VOS sigue el modo elegido con o sin AMS2 (`ServicioOverlay`; prueba `ChipModoTests`).
+- **Ventana de ajustes movible** por su cabecera (arrastre manual con límites de pantalla; recuerda la posición, `ajustesPosicion` en `config.json`).
+- **Ícono propio** (cuadrado rojo con "2" y cinta "AF"): `src/AMS2Frenado.App/Recursos/icono.svg` y `.ico`, vista previa en `docs/ui/icono-vista-previa.png`, script en `tools/icono/`.
 
 ## Fase 5d: sincronía del símbolo con el pitido y anticipación
 
