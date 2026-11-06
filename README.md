@@ -12,13 +12,13 @@ App externa para Windows que lee la telemetría de **Automobilista 2** y muestra
 
 `AMS2Frenado.Core/Grabacion`: `Grabador.Procesar(lectura, segundos)` recibe lecturas (del juego, de una captura o del simulador) y arma, por pista + variante + clase:
 
-- Detector fuerte (frenada: cae 30 km/h o más), suave (toque 10-30 km/h; levantá menos de 10 km/h) y levantada por acelerador (solo el auto visto), uno por participante. Ajustados a ~27 Hz (la frecuencia real medida): suavizado por tiempo y reinicio ante huecos de más de 0,3 s.
+- Detector fuerte (frenada: cae 30 km/h o más), suave (toque 10-30 km/h; levantá menos de 10 km/h) y levantada por acelerador (solo el auto visto), uno por participante. Ajustados a ~27 Hz (primera captura real); verificados también a ~39 Hz (captura de qualy) y a ~26 y ~19 Hz recortando muestras: las zonas salen iguales: suavizado por tiempo y reinicio ante huecos de más de 0,3 s.
 - Vueltas válidas: no la primera que se ve, sin boxes (`mPitModes != 0`) y sin invalidar. Las vueltas se cuentan por cruce de meta (la captura real muestra que el primer cruce no incrementa `mLapsCompleted`).
 - Mediana y dispersión por curva; la IA (pool de todos los autos de la clase) y vos se emparejan por el vértice (velocidad mínima).
 - Salida en `%APPDATA%\AMS2AsistenteFrenado\<pista>\<variante>\`: `mapa.json` (un punto cada 5 m) y `<clase>.json` (curvas con bloques `ia` y `vos`). Guardado atómico (`.tmp` + reemplazo) con `.bak`; al regrabar no se pisan nombres, notas ni campos agregados a mano.
 - Se descartan lecturas sin sentido (`mVersion != 14`, largo de pista 0, pista sin nombre, juego fuera de "jugando").
 
-Probado con el simulador portado del prototipo y con una captura real de AMS2 (Watkins Glen GP, GT3_Gen2): sale la lista de 8 zonas de frenada esperadas. Esa prueba solo corre si la variable de entorno `AMS2_CAPTURA_PRUEBA` apunta a un `.ams2cap` (la captura no está en el repo). **Sin probar en AMS2 en vivo con la app**: la grabación en tiempo real y los pedales del auto visto (`mBrake`/`mThrottle`) solo se probaron con simulador y con una captura.
+Probado con el simulador portado del prototipo y con una captura real de AMS2 (Watkins Glen GP, GT3_Gen2): salen las 8 zonas de frenada esperadas (cada una con una sola curva de la IA, tolerancia 70 m; con dos capturas distintas: ~9 y ~98 vueltas limpias de la IA). Cualquier otra curva es *extra* y debe ser solo tuya (sin referencia de la IA): son eventos reales de tu manejo medidos con el pedal (toques, levantadas o re-frenadas de una vuelta); su cantidad depende de cuántas vueltas limpias tengas, por eso las pruebas no exigen un total fijo. Esa prueba solo corre si la variable de entorno `AMS2_CAPTURA_PRUEBA` apunta a un `.ams2cap` (la captura no está en el repo). **Sin probar en AMS2 en vivo con la app**: la grabación en tiempo real y los pedales del auto visto (`mBrake`/`mThrottle`) solo se probaron con simulador y con una captura.
 
 ## Fase 4: guía (Core, sin UI)
 
@@ -30,7 +30,7 @@ Probado con el simulador portado del prototipo y con una captura real de AMS2 (W
 - Número grande de la frenada: el **cartel** (400/300/200/100/50) donde frenar, no el metro de la pista; ver [docs/CARTELES.md](docs/CARTELES.md). Los metros restantes quedan como dato chico. IA (naranja) y vos (azul) como dos carteles; si coinciden se muestra uno.
 - Toque y Levantá: la velocidad mínima es el dato principal; los metros van en chico (Toque) o no hay (Levantá).
 
-Probado con simulación y con la captura real (Watkins Glen GP, GT3_Gen2, variable `AMS2_CAPTURA_PRUEBA`, se salta si falta): la secuencia Lejos → Aproximación → Inminente → Frená → oculto es monótona en las 8 curvas, para el auto visto y para los 46 autos de la IA. **Sin probar en AMS2 en vivo**; los 5 s, los umbrales y el desfase de cartel se calibran en pista.
+Probado con simulación y con la captura real (Watkins Glen GP, GT3_Gen2, variable `AMS2_CAPTURA_PRUEBA`, se salta si falta): la secuencia Lejos → Aproximación → Inminente → Frená → oculto es monótona en las 8 curvas de la IA (y en las curvas extra tuyas, que la guía sigue con la otra referencia), para el auto visto y para los 46 autos de la IA. **Sin probar en AMS2 en vivo**; los 5 s, los umbrales y el desfase de cartel se calibran en pista.
 
 ## Requisito en el juego
 
