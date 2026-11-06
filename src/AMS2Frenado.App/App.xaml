@@ -1,5 +1,10 @@
 <Application x:Class="AMS2Frenado.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="VentanaDiagnostico.xaml">
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <!-- Fuentes de docs/UI-SPEC.md 3.1: embebidas en Fuentes/; si no cargan, el respaldo de la spec -->
+        <FontFamily x:Key="Barlow">./Fuentes/#Barlow Condensed, Bahnschrift SemiCondensed, Arial Narrow</FontFamily>
+        <FontFamily x:Key="Inter">./Fuentes/#Inter, Segoe UI</FontFamily>
+    </Application.Resources>
 </Application>
