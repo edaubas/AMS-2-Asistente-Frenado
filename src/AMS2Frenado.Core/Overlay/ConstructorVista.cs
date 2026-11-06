@@ -5,7 +5,9 @@ using AMS2Frenado.Core.Guia;
 namespace AMS2Frenado.Core.Overlay;
 
 /// <summary>Datos que la guia no trae y la vista necesita.</summary>
-public sealed record ContextoVista(string Clase = "", string Pista = "", string Variante = "", double LargoPista = 0);
+/// <param name="MotivoArchivo">Por que no se cargo el archivo de la clase (danado, inexistente); Ok si se leyo.</param>
+public sealed record ContextoVista(string Clase = "", string Pista = "", string Variante = "", double LargoPista = 0,
+    MotivoLectura MotivoArchivo = MotivoLectura.Ok);
 
 public static class FormatoUi
 {
@@ -28,19 +30,43 @@ public static class ConstructorVista
 
     public static VistaPanel Construir(PanelGuia p, ContextoVista c) => p.Estado switch
     {
-        EstadoPanel.SinDatos => SinDatos(c),
+        EstadoPanel.SinDatos => SinDatos(p, c),
         EstadoPanel.Lejos => Lejos(p),
         _ => Guia(p, c),
     };
 
-    public static VistaPanel SinDatos(ContextoVista c)
+    /// <summary>SIN DATOS con la causa real: boxes, largo distinto, archivo danado, datos inservibles o sin curvas.</summary>
+    public static VistaPanel SinDatos(PanelGuia p, ContextoVista c)
+    {
+        var ci = CultureInfo.InvariantCulture;
+        string archivo = c.Clase.Length == 0 ? "la clase" : Almacen.NombreSeguro(c.Clase) + ".json";
+        // un archivo que no se pudo leer manda sobre cualquier otra causa: el motor lo ve como "sin curvas"
+        if (c.MotivoArchivo == MotivoLectura.Danado)
+            return Aviso("SIN DATOS", "No se pudo leer el archivo de datos.",
+                $"Revisá {archivo} en la carpeta de datos (Bandeja › Datos) o restaurá su copia .bak.");
+        return p.Causa switch
+        {
+            CausaSinDatos.EnBoxes => Aviso("SIN DATOS", "En boxes: la guía arranca al salir a pista."),
+            CausaSinDatos.LargoDistinto => Aviso("SIN DATOS",
+                string.Create(ci, $"Largo de pista distinto al guardado (guardado {Math.Round(p.LargoGuardadoM):0} m, juego {Math.Round(p.LargoJuegoM):0} m)."),
+                "Puede ser otra variante o una versión distinta de la pista. Regrabá la clase en Bandeja › Modo › Grabar todo."),
+            CausaSinDatos.CurvasInvalidas => Aviso("SIN DATOS", "Datos sin curvas válidas.",
+                $"Las curvas de {archivo} no tienen un frenado utilizable. Regrabá la clase."),
+            _ => SinCurvas(c),
+        };
+    }
+
+    /// <summary>No hay archivo (o no tiene curvas) para esta pista y clase.</summary>
+    public static VistaPanel SinCurvas(ContextoVista c)
     {
         string donde = c.Pista.Length == 0 ? "esta pista"
             : c.Variante.Length == 0 ? c.Pista : $"{c.Pista} · {c.Variante}";
         string clase = c.Clase.Length == 0 ? "" : $" para {c.Clase}";
         return Aviso("SIN DATOS", $"No hay curvas guardadas{clase} en {donde}.",
-            "Bandeja › Modo › Grabar y da unas 10 vueltas con IA en pista.");
+            "Bandeja › Modo › Grabar todo y da unas 10 vueltas con IA en pista.");
     }
+
+    public static VistaPanel SinDatos(ContextoVista c) => SinCurvas(c);
 
     public static VistaPanel EsperandoAms2()
         => Aviso("ESPERANDO AMS2", "No detecto AMS2.", "Activá Options › System › Shared Memory = Project CARS 2.");

@@ -3,6 +3,12 @@ using System.Text.Json;
 
 namespace AMS2Frenado.Core.Grabacion;
 
+/// <summary>Por que una lectura de datos no devolvio nada.</summary>
+public enum MotivoLectura { Ok, NoExiste, Danado }
+
+/// <summary>Resultado de leer un JSON de datos: el contenido (o null) y el motivo si no hay contenido.</summary>
+public readonly record struct LecturaDatos<T>(T? Datos, MotivoLectura Motivo, bool DeRespaldo = false, string? Detalle = null) where T : class;
+
 /// <summary>
 /// Lee y escribe los JSON de datos: una carpeta por pista y variante bajo la ruta base
 /// (por defecto %APPDATA%\AMS2AsistenteFrenado\). La ruta base se inyecta para poder probar.
@@ -52,17 +58,45 @@ public sealed class Almacen
 
     /// <summary>Lee un JSON; si esta danado prueba el respaldo .bak; si tampoco sirve devuelve null.</summary>
     public static T? Leer<T>(string ruta) where T : class
-        => LeerArchivo<T>(ruta) ?? LeerArchivo<T>(ruta + ".bak");
+        => LeerDetallado<T>(ruta).Datos;
 
-    private static T? LeerArchivo<T>(string ruta) where T : class
+    /// <summary>Lo mismo que <see cref="Leer{T}"/>, pero ademas dice por que no hay datos (no existe o esta danado).</summary>
+    public LecturaDatos<DatosClase> LeerClaseDetallado(string pista, string variante, string clase)
+        => LeerDetallado<DatosClase>(RutaClase(pista, variante, clase));
+
+    public LecturaDatos<MapaPista> LeerMapaDetallado(string pista, string variante)
+        => LeerDetallado<MapaPista>(RutaMapa(pista, variante));
+
+    /// <summary>
+    /// Lee el archivo y, si esta danado, su .bak. <see cref="MotivoLectura.NoExiste"/> solo si no hay ni uno ni otro;
+    /// <see cref="MotivoLectura.Danado"/> si hay archivo pero ninguno de los dos se puede leer.
+    /// </summary>
+    public static LecturaDatos<T> LeerDetallado<T>(string ruta) where T : class
     {
+        var principal = LeerArchivo<T>(ruta, out var motivoP, out var detalleP);
+        if (principal is not null) return new LecturaDatos<T>(principal, MotivoLectura.Ok);
+        var respaldo = LeerArchivo<T>(ruta + ".bak", out var motivoB, out var detalleB);
+        if (respaldo is not null) return new LecturaDatos<T>(respaldo, MotivoLectura.Ok, DeRespaldo: true);
+        if (motivoP == MotivoLectura.NoExiste && motivoB == MotivoLectura.NoExiste)
+            return new LecturaDatos<T>(null, MotivoLectura.NoExiste);
+        return new LecturaDatos<T>(null, MotivoLectura.Danado, Detalle: motivoP == MotivoLectura.Danado ? detalleP : detalleB);
+    }
+
+    private static T? LeerArchivo<T>(string ruta) where T : class => LeerArchivo<T>(ruta, out _, out _);
+
+    private static T? LeerArchivo<T>(string ruta, out MotivoLectura motivo, out string? detalle) where T : class
+    {
+        motivo = MotivoLectura.Ok; detalle = null;
         try
         {
-            if (!File.Exists(ruta)) return null;
-            return JsonSerializer.Deserialize<T>(File.ReadAllText(ruta, Encoding.UTF8), OpcionesJson);
+            if (!File.Exists(ruta)) { motivo = MotivoLectura.NoExiste; return null; }
+            var r = JsonSerializer.Deserialize<T>(File.ReadAllText(ruta, Encoding.UTF8), OpcionesJson);
+            if (r is null) { motivo = MotivoLectura.Danado; detalle = "el archivo no tiene contenido util"; }
+            return r;
         }
         catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException)
         {
+            motivo = MotivoLectura.Danado; detalle = e.Message;
             return null;
         }
     }

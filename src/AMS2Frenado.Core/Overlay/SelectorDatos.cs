@@ -21,7 +21,8 @@ public sealed record ContextoJuego(string Pista, string Variante, string Clase)
     }
 }
 
-public sealed record DatosCargados(DatosClase? Clase, MapaPista? Mapa, long Sello)
+/// <param name="MotivoClase">Por que no hay <paramref name="Clase"/>: no existe el archivo o esta danado (Ok si se leyo).</param>
+public sealed record DatosCargados(DatosClase? Clase, MapaPista? Mapa, long Sello, MotivoLectura MotivoClase = MotivoLectura.Ok)
 {
     public bool HayCurvas => Clase is { Curvas.Count: > 0 };
 }
@@ -31,9 +32,9 @@ public static class SelectorDatos
 {
     public static DatosCargados Cargar(Almacen almacen, ContextoJuego ctx)
     {
-        var clase = almacen.LeerClase(ctx.Pista, ctx.Variante, ctx.Clase);
+        var clase = almacen.LeerClaseDetallado(ctx.Pista, ctx.Variante, ctx.Clase);
         var mapa = almacen.LeerMapa(ctx.Pista, ctx.Variante);
-        return new DatosCargados(clase, mapa, Sello(almacen, ctx));
+        return new DatosCargados(clase.Datos, mapa, Sello(almacen, ctx), clase.Motivo);
     }
 
     /// <summary>Cambia cuando cambia alguno de los dos archivos (para recargar solo si hace falta).</summary>

@@ -129,16 +129,26 @@ public sealed class MotorGuia
 
     public PanelGuia Actualizar(in EntradaGuia e)
     {
-        if (!e.Valida || double.IsNaN(e.DistanciaVuelta) || double.IsInfinity(e.DistanciaVuelta)
-            || double.IsNaN(e.Segundos) || e.DistanciaVuelta < 0)
-            return _ultimo;                      // lectura sin sentido: se mantiene lo ultimo
-
+        // lo primero es ver si hay algo que mostrar: asi el panel puede decir la causa real del SIN DATOS
         if (_plan is null) ConstruirPlan(e.LargoPista);
-        if (_plan!.Count == 0 || _largo <= 0
-            || (e.LargoPista > 0 && Math.Abs(e.LargoPista - _largo) > 0.02 * _largo))
+        var causa = CausaDatos(e.LargoPista);
+        if (causa != CausaSinDatos.Ninguna)
         {
             ReiniciarSeguimiento();
-            return _ultimo = new PanelGuia { Estado = EstadoPanel.SinDatos, Visible = true, Grabando = _grabando, TextoEstado = "SIN DATOS" };
+            return _ultimo = new PanelGuia
+            {
+                Estado = EstadoPanel.SinDatos, Visible = true, Grabando = _grabando, TextoEstado = "SIN DATOS",
+                Causa = causa, LargoGuardadoM = _largo, LargoJuegoM = e.LargoPista,
+            };
+        }
+
+        if (!e.Valida || double.IsNaN(e.DistanciaVuelta) || double.IsInfinity(e.DistanciaVuelta)
+            || double.IsNaN(e.Segundos) || e.DistanciaVuelta < 0)
+        {
+            // lectura sin sentido (boxes, garaje): se mantiene lo ultimo; si todavia no hubo nada, se dice que es por boxes
+            if (_ultimo.Estado == EstadoPanel.SinDatos)
+                _ultimo = _ultimo with { Causa = CausaSinDatos.EnBoxes, Grabando = _grabando, LargoGuardadoM = 0, LargoJuegoM = 0 };
+            return _ultimo;
         }
 
         double L = _largo;
@@ -219,6 +229,15 @@ public sealed class MotorGuia
         double metros = _metrosMin;
 
         return _ultimo = Armar(p, idx, _nivel, metros, aVertice, ventana);
+    }
+
+    /// <summary>Ninguna si hay curvas utilizables para el largo de pista actual; si no, por que no.</summary>
+    private CausaSinDatos CausaDatos(double largoJuego)
+    {
+        if (_datos is null || _datos.Curvas.Count == 0) return CausaSinDatos.SinCurvas;
+        if (_plan!.Count == 0 || _largo <= 0) return CausaSinDatos.CurvasInvalidas;
+        if (largoJuego > 0 && Math.Abs(largoJuego - _largo) > 0.02 * _largo) return CausaSinDatos.LargoDistinto;
+        return CausaSinDatos.Ninguna;
     }
 
     private int Nivel(TipoCurva tipo, double aFrenar, double ventana)
