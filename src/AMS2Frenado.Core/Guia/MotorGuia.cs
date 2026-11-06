@@ -156,7 +156,7 @@ public sealed class MotorGuia
         if (_prevT is double pt && e.Segundos < pt) ReiniciarSeguimiento();     // el tiempo volvio atras: sesion nueva
         _prevT = e.Segundos;
 
-        var ms = new double[_plan.Count];
+        var ms = new double[_plan!.Count];
         for (int i = 0; i < ms.Length; i++) ms[i] = Geometria.Mod(_plan[i].Vertice - d, L);
 
         // ---- que curva seguimos
