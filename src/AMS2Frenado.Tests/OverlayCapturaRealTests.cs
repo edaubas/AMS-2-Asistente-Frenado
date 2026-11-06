@@ -46,18 +46,50 @@ public sealed class OverlayCapturaRealTests : IDisposable
         Assert.True(conContadores > 0);
         s.Modo = ModoApp.Mostrar;
 
+        // tamaño real de lo que guarda la app (docs/DATOS.md): JSON chicos, del orden de KB
+        long total = 0;
+        foreach (var f in Directory.EnumerateFiles(_dir, "*", SearchOption.AllDirectories).Order())
+        {
+            var len = new FileInfo(f).Length;
+            if (!f.EndsWith(".bak")) total += len;
+            _out.WriteLine($"TAMANO {Path.GetRelativePath(_dir, f)}: {len} bytes");
+            Assert.True(len < 200 * 1024, $"{f} pesa {len} bytes");
+        }
+        _out.WriteLine($"TAMANO total (sin .bak): {total} bytes");
+
         var vistas = new List<VistaOverlay>();
         double off = 100000;
         foreach (var (r, t) in Lecturas(ruta)) vistas.Add(s.Paso(r, off + t));
         var jugando = vistas.Where(v => v.Guia is not null && v.Guia.Estado != EstadoPanel.SinDatos).ToList();
         Assert.NotEmpty(jugando);
 
-        var carteles = jugando.Where(v => v.Panel.Estado == EstadoPanel.Frena).Select(v => v.Panel.NumeroPrincipal).Distinct().OrderBy(x => x).ToList();
-        _out.WriteLine("Carteles vistos en FRENA: " + string.Join(", ", carteles));
-        Assert.All(carteles, c => Assert.Contains(c, new[] { "400", "300", "200", "100", "50", "—" }));
-        Assert.Contains(jugando, v => v.Panel.Estado == EstadoPanel.Inminente && v.Panel.ColorNumero == Paleta.Ambar);
-        Assert.False(jugando[^1].Mapa.EstaVacio);
+        // el cartel ya no se muestra: la frenada no lleva numero grande
+        Assert.All(jugando.Where(v => v.Panel.Tipo == TipoTarjeta.Guia && v.Guia!.Tipo == TipoCurva.Frenada),
+            v => Assert.Null(v.Panel.NumeroPrincipal));
+        Assert.Contains(jugando, v => v.Panel.Estado == EstadoPanel.Inminente && v.Panel.ColorMetros == Paleta.Ambar);
+        Assert.Contains(jugando, v => v.Panel.Estado == EstadoPanel.Frena && v.Panel.TextoFranja == "FRENÁ");
         Assert.Equal("GT3_Gen2", jugando[^1].ChipClase);
+
+        // el aviso de frenada sobre la captura real: a lo sumo uno por tramo de FRENA y nunca con el pedal ya apretado
+        var av = new ServicioOverlay(new Almacen(_dir)) { Modo = ModoApp.Mostrar };
+        int avisos = 0, tramos = 0; bool prevFrena = false, prevVis = false; int prevCurva = -1; double tc = 0;
+        foreach (var (r, t) in Lecturas(ruta))
+        {
+            var v = av.Paso(r, 200000 + t);
+            if (v.Guia is null) continue;
+            for (; tc + 200000 <= 200000 + t; tc += 1 / 60.0)
+            {
+                bool vis = av.ActualizarAviso(200000 + tc).Visible;
+                if (vis && !prevVis) avisos++;
+                prevVis = vis;
+            }
+            bool fr = v.Guia.Estado == EstadoPanel.Frena;
+            if (fr && (!prevFrena || v.Guia.IndiceCurva != prevCurva)) tramos++;
+            prevFrena = fr; prevCurva = fr ? v.Guia.IndiceCurva : -1;
+        }
+        _out.WriteLine($"Aviso de frenada: {avisos} avisos en {tramos} tramos de FRENA");
+        Assert.True(tramos > 0);
+        Assert.InRange(avisos, 1, tramos);
 
         // la secuencia de lo que se dibuja tampoco retrocede dentro de una curva (misma regla que el motor)
         var su = new Suavizador();

@@ -17,7 +17,8 @@ public sealed class PosicionVentana
 
 /// <summary>
 /// Configuracion persistente (%APPDATA%\AMS2AsistenteFrenado\config.json). Los carteles por pista no van aca:
-/// viven en el mapa.json de cada pista (campo opcional "carteles", ver docs/CARTELES.md).
+/// viven en el mapa.json de cada pista (campo opcional "carteles", ver docs/CARTELES.md). Los campos que ya no
+/// existen (mapaVisible, mapaCompacto, rojoSuave) se ignoran al leer un config.json de la fase 5.
 /// </summary>
 public sealed class ConfigApp
 {
@@ -29,16 +30,20 @@ public sealed class ConfigApp
     /// <summary>Pitido al entrar en FRENA. Apagado por defecto.</summary>
     public bool Pitido { get; set; }
     public ReferenciaGuia ReferenciaPrincipal { get; set; } = ReferenciaGuia.Ia;
-    /// <summary>Ultima esquina elegida (y la que se usa si no hay posicion guardada para el monitor).</summary>
+    /// <summary>Esquina donde se ancla la primera vez (sin posicion guardada para el monitor). Ya no hay menu para cambiarla: se mueve a mano.</summary>
     public Esquina Esquina { get; set; } = Esquina.ArribaDerecha;
     /// <summary>Escala de 0,75 a 1,5 sobre el ancho base de 320 px.</summary>
     public double Escala { get; set; } = 1.0;
     /// <summary>Alfa del fondo, 0,80 a 0,95. El texto nunca se atenua.</summary>
     public double Opacidad { get; set; } = MedidasUi.AlfaPorDefecto;
-    public bool MapaVisible { get; set; } = true;
-    public bool MapaCompacto { get; set; }
-    /// <summary>Opcion "Rojo suave" de la franja de FRENA (UI-SPEC 3.5).</summary>
-    public bool RojoSuave { get; set; }
+    /// <summary>Aviso de frenada (simbolo de freno en ventana aparte). Activado por defecto.</summary>
+    public bool AvisoActivo { get; set; } = true;
+    /// <summary>Segundos maximos que el aviso queda en pantalla si no frenas (1 a 2).</summary>
+    public double AvisoDuracionS { get; set; } = AvisoFrenada.DuracionPorDefectoS;
+    /// <summary>Escala del simbolo, 0,5 a 3 sobre 120 px.</summary>
+    public double AvisoEscala { get; set; } = 1.0;
+    /// <summary>Posicion de la ventana del aviso en DIP por monitor. Vacio: centrado, en el tercio superior.</summary>
+    public Dictionary<string, PosicionVentana> AvisoPosiciones { get; set; } = [];
     public string Atajo { get; set; } = AtajoTeclado.PorDefecto.Texto;
     public bool AvisoInicialMostrado { get; set; }
     /// <summary>Posicion de la ventana en DIP por monitor (clave: nombre del monitor). Vacio: se usa la esquina.</summary>
@@ -56,9 +61,30 @@ public sealed class ConfigApp
         if (!Enum.IsDefined(Esquina)) Esquina = Esquina.ArribaDerecha;
         var atajo = AtajoTeclado.Parsear(Atajo) ?? AtajoTeclado.PorDefecto;
         Atajo = atajo.Texto;
-        Posiciones ??= [];
-        foreach (var k in Posiciones.Where(kv => kv.Value is null || !double.IsFinite(kv.Value.X) || !double.IsFinite(kv.Value.Y)).Select(kv => kv.Key).ToList())
-            Posiciones.Remove(k);
+        AvisoDuracionS = AvisoFrenada.LimitarDuracion(AvisoDuracionS);
+        AvisoEscala = MedidasAviso.LimitarEscala(AvisoEscala);
+        Posiciones = LimpiarPosiciones(Posiciones);
+        AvisoPosiciones = LimpiarPosiciones(AvisoPosiciones);
+    }
+
+    private static Dictionary<string, PosicionVentana> LimpiarPosiciones(Dictionary<string, PosicionVentana>? d)
+    {
+        d ??= [];
+        foreach (var k in d.Where(kv => kv.Value is null || !double.IsFinite(kv.Value.X) || !double.IsFinite(kv.Value.Y)).Select(kv => kv.Key).ToList())
+            d.Remove(k);
+        return d;
+    }
+
+    /// <summary>Copia todos los valores de otra configuracion (por ejemplo, tras importar un config.json).</summary>
+    public void CopiarDe(ConfigApp o)
+    {
+        Modo = o.Modo; Bloqueado = o.Bloqueado; Visible = o.Visible; Pitido = o.Pitido;
+        ReferenciaPrincipal = o.ReferenciaPrincipal; Esquina = o.Esquina; Escala = o.Escala; Opacidad = o.Opacidad;
+        AvisoActivo = o.AvisoActivo; AvisoDuracionS = o.AvisoDuracionS; AvisoEscala = o.AvisoEscala;
+        AvisoPosiciones = new Dictionary<string, PosicionVentana>(o.AvisoPosiciones);
+        Atajo = o.Atajo; AvisoInicialMostrado = o.AvisoInicialMostrado;
+        Posiciones = new Dictionary<string, PosicionVentana>(o.Posiciones);
+        Normalizar();
     }
 }
 
@@ -116,9 +142,10 @@ public sealed class AlmacenConfig
                 Esquina = Campo(o, "esquina", d.Esquina),
                 Escala = Campo(o, "escala", d.Escala),
                 Opacidad = Campo(o, "opacidad", d.Opacidad),
-                MapaVisible = Campo(o, "mapaVisible", d.MapaVisible),
-                MapaCompacto = Campo(o, "mapaCompacto", d.MapaCompacto),
-                RojoSuave = Campo(o, "rojoSuave", d.RojoSuave),
+                AvisoActivo = Campo(o, "avisoActivo", d.AvisoActivo),
+                AvisoDuracionS = Campo(o, "avisoDuracionS", d.AvisoDuracionS),
+                AvisoEscala = Campo(o, "avisoEscala", d.AvisoEscala),
+                AvisoPosiciones = Campo(o, "avisoPosiciones", new Dictionary<string, PosicionVentana>()),
                 Atajo = Campo(o, "atajo", d.Atajo),
                 AvisoInicialMostrado = Campo(o, "avisoInicialMostrado", d.AvisoInicialMostrado),
                 Posiciones = Campo(o, "posiciones", new Dictionary<string, PosicionVentana>()),

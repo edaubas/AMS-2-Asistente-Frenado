@@ -32,36 +32,36 @@ public sealed class OverlayVistaTests
     private static readonly ContextoVista Ctx = new("GT3", "Pista de ejemplo", "GP", 5000);
 
     [Fact]
-    public void AproximacionConUnSoloCartelTieneEtiquetaDobleYReglaSinNumeros()
+    public void AproximacionNoMuestraElCartelYLlevaLegendaDobleVelocidadesYRegla()
     {
         var v = ConstructorVista.Construir(Guia(EstadoPanel.Aproximacion), Ctx);
         Assert.Equal(TipoTarjeta.Guia, v.Tipo);
         Assert.Equal("CURVA 7", v.CurvaTxt);
         Assert.Equal("248 → 96 km/h", v.VelocidadesTxt);
-        Assert.Equal("200", v.NumeroPrincipal);
-        Assert.Equal("m", v.UnidadPrincipal);
+        // el cartel ("200 m") se leia como cuenta regresiva: ya no se muestra (docs/CARTELES.md)
+        Assert.Null(v.NumeroPrincipal);
+        Assert.Null(v.UnidadPrincipal);
+        Assert.Null(v.NumeroSecundario);
+        Assert.Null(v.EtiquetaSecundaria);
         Assert.Equal(["IA", "VOS"], v.EtiquetasPrincipal.Select(e => e.Texto));
         Assert.Equal([FormaMarcador.Rombo, FormaMarcador.Circulo], v.EtiquetasPrincipal.Select(e => e.Forma));
-        Assert.Null(v.NumeroSecundario);
         Assert.Null(v.TextoFranja);
-        Assert.Equal("185 m", v.Metros);
+        Assert.Equal("185 m", v.Metros);                         // dato chico, cuenta regresiva real
         Assert.True(v.MostrarRegla);
         Assert.Equal(300, v.EscalaReglaM);                       // la regla usa la ventana vigente
-        Assert.Equal(Paleta.Blanco, v.ColorNumero);
     }
 
     [Fact]
-    public void DosCartelesDistintosVosGrandeIaALaDerecha()
+    public void AunConCartelesDistintosLaFrenadaNoMuestraNumeroPeroConservaLosDosMarcadores()
     {
-        var v = ConstructorVista.Construir(Guia(EstadoPanel.Aproximacion, cartelIa: 300, cartelVos: 200), Ctx);
-        Assert.Equal("200", v.NumeroPrincipal);
-        Assert.Equal(["VOS"], v.EtiquetasPrincipal.Select(e => e.Texto));
-        Assert.Equal(Paleta.AzulVos, v.EtiquetasPrincipal[0].Color);
-        Assert.Equal("300", v.NumeroSecundario);
-        Assert.Equal("m", v.UnidadSecundaria);
-        Assert.Equal("IA", v.EtiquetaSecundaria!.Texto);
-        Assert.Equal(FormaMarcador.Rombo, v.EtiquetaSecundaria.Forma);
-        Assert.Equal(Paleta.NaranjaIa, v.EtiquetaSecundaria.Color);
+        var p = Guia(EstadoPanel.Aproximacion, cartelIa: 300, cartelVos: 200);
+        Assert.Equal(300, p.CartelIa);                           // el concepto sigue en Core
+        var v = ConstructorVista.Construir(p, Ctx);
+        Assert.Null(v.NumeroPrincipal);
+        Assert.Null(v.NumeroSecundario);
+        Assert.Equal(["IA", "VOS"], v.EtiquetasPrincipal.Select(e => e.Texto));
+        Assert.Equal(Paleta.NaranjaIa, v.EtiquetasPrincipal[0].Color);
+        Assert.Equal(Paleta.AzulVos, v.EtiquetasPrincipal[1].Color);
         // la regla lleva un marcador por referencia, distinguidos por forma
         Assert.Equal(2, v.Marcadores.Count);
         Assert.Contains(v.Marcadores, m => m.Forma == FormaMarcador.Rombo);
@@ -81,46 +81,47 @@ public sealed class OverlayVistaTests
     }
 
     [Fact]
-    public void InminentePintaAmbarSoloLaCifraYLaCuentaRegresiva()
+    public void InminentePintaAmbarSoloLaCuentaRegresivaChica()
     {
         var v = ConstructorVista.Construir(Guia(EstadoPanel.Inminente, metros: 62), Ctx);
-        Assert.Equal(Paleta.Ambar, v.ColorNumero);
         Assert.Equal(Paleta.Ambar, v.ColorMetros);
         Assert.Equal("62 m", v.Metros);
         Assert.All(v.EtiquetasPrincipal, e => Assert.NotEqual(Paleta.Ambar, e.Color));     // nunca ambar en etiquetas
     }
 
     [Fact]
-    public void FrenaTieneFranjaRojaSuperiorYNadaMas()
+    public void FrenaTieneFranjaRojaDe40pxYElCuerpoSoloVelocidadesYLegenda()
     {
         var v = ConstructorVista.Construir(Guia(EstadoPanel.Frena, cartelIa: 300), Ctx);
         Assert.Equal("FRENÁ", v.TextoFranja);
         Assert.Equal("#C62F26", v.ColorFranja);
+        Assert.Equal(Paleta.Blanco, v.ColorTextoFranja);
         Assert.Equal("CURVA 7", v.CurvaTxt);
-        Assert.Equal("200", v.NumeroPrincipal);
-        Assert.Equal("300", v.NumeroSecundario);
+        Assert.Null(v.NumeroPrincipal);
+        Assert.Null(v.NumeroSecundario);
+        Assert.Equal("248 → 96 km/h", v.VelocidadesTxt);
+        Assert.Equal(["IA", "VOS"], v.EtiquetasPrincipal.Select(e => e.Texto));
         Assert.False(v.MostrarRegla);
         Assert.Empty(v.Marcadores);
         Assert.Null(v.Metros);
-        Assert.Null(v.VelocidadesTxt);
-        Assert.False(v.ContornoRojo);
+        Assert.Equal(40, MedidasUi.AltoFranja);
     }
 
     [Fact]
-    public void FrenaConUnSoloCartelEsEtiquetaDoble()
+    public void LosMetrosRestantesSonUnaCuentaRegresivaRealHastaCero()
     {
-        var v = ConstructorVista.Construir(Guia(EstadoPanel.Frena), Ctx);
-        Assert.Equal(["IA", "VOS"], v.EtiquetasPrincipal.Select(e => e.Texto));
-        Assert.Null(v.NumeroSecundario);
+        var a = ConstructorVista.Construir(Guia(EstadoPanel.Aproximacion, metros: 120), Ctx);
+        var b = ConstructorVista.Construir(Guia(EstadoPanel.Inminente, metros: 40), Ctx);
+        var c = ConstructorVista.Construir(Guia(EstadoPanel.Inminente, metros: 0.2), Ctx);
+        Assert.Equal("120 m|40 m|0 m", string.Join("|", a.Metros, b.Metros, c.Metros));
     }
 
     [Fact]
-    public void RojoSuaveUsaFranjaOscuraYContornoRojo()
+    public void YaNoExisteElRojoSuaveLaFranjaEsSiempreC62F26()
     {
-        var v = ConstructorVista.Construir(Guia(EstadoPanel.Frena), Ctx with { RojoSuave = true });
-        Assert.Equal("#5A1D19", v.ColorFranja);
-        Assert.Equal("#FF9C94", v.ColorTextoFranja);
-        Assert.True(v.ContornoRojo);
+        Assert.Null(typeof(ContextoVista).GetProperty("RojoSuave"));
+        Assert.Null(typeof(ConfigApp).GetProperty("RojoSuave"));
+        Assert.Null(typeof(VistaPanel).GetProperty("ContornoRojo"));
     }
 
     [Theory]
@@ -129,14 +130,10 @@ public sealed class OverlayVistaTests
     public void ToqueYLevantaUsanFranjaNeutraNuncaRoja(EstadoPanel e, string texto)
     {
         var tipo = e == EstadoPanel.Toque ? TipoCurva.Toque : TipoCurva.Levanta;
-        foreach (bool suave in new[] { false, true })
-        {
-            var v = ConstructorVista.Construir(Guia(e, tipo, null, null), Ctx with { RojoSuave = suave });
-            Assert.Equal(texto, v.TextoFranja);
-            Assert.Equal("#3B4652", v.ColorFranja);
-            Assert.Equal(Paleta.Blanco, v.ColorTextoFranja);
-            Assert.False(v.ContornoRojo);
-        }
+        var v = ConstructorVista.Construir(Guia(e, tipo, null, null), Ctx);
+        Assert.Equal(texto, v.TextoFranja);
+        Assert.Equal("#3B4652", v.ColorFranja);
+        Assert.Equal(Paleta.Blanco, v.ColorTextoFranja);
     }
 
     [Fact]
@@ -183,6 +180,14 @@ public sealed class OverlayVistaTests
         Assert.Equal("CURVA 7", v.CurvaTxt);
         Assert.Equal("640 m", v.Metros);
         Assert.Null(v.NumeroPrincipal);
+    }
+
+    [Fact]
+    public void ElPanelNoTieneNadaDeMapa()
+    {
+        Assert.Null(typeof(ContadoresGrabacion).GetProperty("Mapa"));
+        Assert.Null(typeof(VistaOverlay).GetProperty("Mapa"));
+        Assert.Null(typeof(MedidasUi).GetField("MapaAncho"));
     }
 
     [Fact]

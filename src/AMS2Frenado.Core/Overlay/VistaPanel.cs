@@ -16,7 +16,7 @@ public sealed record EtiquetaRef(FormaMarcador Forma, string Texto, string Color
 public sealed record MarcadorRegla(FormaMarcador Forma, string Color, double Fraccion);
 
 public sealed record ContadoresGrabacion(
-    string Encabezado, string Ia, string IaDetalle, string Vos, string VosDetalle, string Mapa, string MapaDetalle, string Pie);
+    string Encabezado, string Ia, string IaDetalle, string Vos, string VosDetalle, string Pie);
 
 public enum TipoTarjeta { Ninguna, SinDatos, Lejos, Guia, Grabando }
 
@@ -34,16 +34,14 @@ public sealed record VistaPanel
     public string? TextoFranja { get; init; }
     public string? ColorFranja { get; init; }
     public string? ColorTextoFranja { get; init; }
-    /// <summary>"Rojo suave": ademas de la franja oscura, un contorno rojo de 3 px.</summary>
-    public bool ContornoRojo { get; init; }
 
     public string? CurvaTxt { get; init; }
     public string? VelocidadesTxt { get; init; }
 
     public IReadOnlyList<EtiquetaRef> EtiquetasPrincipal { get; init; } = [];
+    /// <summary>Velocidad minima de Toque y Levanta ("132"). Null en las frenadas: el cartel ya no se muestra (docs/CARTELES.md).</summary>
     public string? NumeroPrincipal { get; init; }
     public string? UnidadPrincipal { get; init; }
-    public string ColorNumero { get; init; } = Paleta.Blanco;
 
     public EtiquetaRef? EtiquetaSecundaria { get; init; }
     public string? NumeroSecundario { get; init; }
@@ -67,8 +65,8 @@ public sealed record VistaPanel
 
     /// <summary>Texto que identifica todo lo dibujado: la ventana solo repinta si cambia.</summary>
     public string Firma => string.Join("|",
-        Tipo, Estado, IndiceCurva, TextoFranja, ColorFranja, ColorTextoFranja, ContornoRojo, CurvaTxt, VelocidadesTxt,
-        string.Join(",", EtiquetasPrincipal.Select(e => e.Texto)), NumeroPrincipal, UnidadPrincipal, ColorNumero,
+        Tipo, Estado, IndiceCurva, TextoFranja, ColorFranja, ColorTextoFranja, CurvaTxt, VelocidadesTxt,
+        string.Join(",", EtiquetasPrincipal.Select(e => e.Texto)), NumeroPrincipal, UnidadPrincipal,
         EtiquetaSecundaria?.Texto, NumeroSecundario, UnidadSecundaria, MostrarRegla, EscalaReglaM,
         string.Join(",", Marcadores.Select(m => $"{m.Forma}:{m.Fraccion:0.###}")), Metros, ColorMetros,
         Titulo, ColorTitulo, Linea1, Linea2, Contadores);

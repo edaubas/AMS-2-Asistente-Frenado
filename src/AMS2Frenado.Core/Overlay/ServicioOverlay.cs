@@ -10,13 +10,13 @@ public sealed record VistaOverlay
     public VistaPanel Panel { get; init; } = VistaPanel.Nada;
     /// <summary>Estado crudo de la guia (null mientras no hay lectura valida).</summary>
     public PanelGuia? Guia { get; init; }
-    public VistaMapa Mapa { get; init; } = VistaMapa.Vacio;
-    public string TituloMapa { get; init; } = "";
+    /// <summary>"Pista · variante" para el encabezado.</summary>
+    public string TituloPista { get; init; } = "";
     /// <summary>Chip con la clase ("GT3"); vacio si no se conoce.</summary>
     public string ChipClase { get; init; } = "";
     public bool Grabando { get; init; }
-    /// <summary>Distancia de vuelta del auto visto, para ubicarlo en el mapa. Null si no hay lectura valida.</summary>
-    public double? DistanciaM { get; init; }
+    /// <summary>Pedal de freno del auto visto, 0..1 (0 sin lectura valida).</summary>
+    public double Freno { get; init; }
     /// <summary>Verdadero solo en el tick en que hay que pitar.</summary>
     public bool Pitar { get; init; }
     /// <summary>Aviso fuera de banda (ej. no se pudo guardar). Null si no hay.</summary>
@@ -43,7 +43,8 @@ public sealed class ServicioOverlay
 
     private ContextoJuego? _ctx;
     private DatosCargados _datos = new(null, null, 0);
-    private VistaMapa _mapa = VistaMapa.Vacio;
+    private readonly AvisoFrenada _aviso = new();
+    private double _freno;
     private double _tRecarga = double.NegativeInfinity;
     private uint? _ultimaSecuencia;
     private bool _huboSesion;
@@ -70,7 +71,21 @@ public sealed class ServicioOverlay
     }
 
     public ReferenciaGuia ReferenciaPrincipal { get; set; } = ReferenciaGuia.Ia;
-    public bool RojoSuave { get; set; }
+    /// <summary>Aviso de frenada (simbolo en ventana aparte): activado por defecto.</summary>
+    public bool AvisoActivo { get => _aviso.Habilitado; set => _aviso.Habilitado = value; }
+    public double AvisoDuracionS { get => _aviso.DuracionS; set => _aviso.DuracionS = value; }
+    /// <summary>"Probar aviso": lo muestra durante la duracion configurada sin estar en pista.</summary>
+    public void ProbarAviso(double segundos) => _aviso.Probar(segundos);
+
+    /// <summary>
+    /// Opacidad del aviso de frenada en este instante. Se llama en cada tick de la ventana (~60 Hz), con o sin muestra
+    /// nueva, para que el fundido de 80 ms avance con el reloj y no con la telemetria (~27 Hz).
+    /// </summary>
+    public CuadroAviso ActualizarAviso(double segundos)
+        => _aviso.Actualizar(_ultima.Lectura == EstadoLectura.Ok ? _ultima.Guia : null, _freno, segundos);
+
+    /// <summary>Fuerza releer los archivos de datos (por ejemplo, despues de importar un respaldo).</summary>
+    public void ForzarRecarga() { _tRecarga = double.NegativeInfinity; _ultimaSecuencia = null; }
     public bool Pitido { get => _pitido.Habilitado; set => _pitido.Habilitado = value; }
     public Almacen Almacen => _almacen;
     public VistaOverlay Ultima => _ultima;
@@ -89,10 +104,10 @@ public sealed class ServicioOverlay
         switch (r.Estado)
         {
             case EstadoLectura.SinJuego:
-                _ctx = null; _ultimaSecuencia = null; _huboSesion = false;
+                _ctx = null; _ultimaSecuencia = null; _huboSesion = false; _freno = 0;
                 return _ultima = new VistaOverlay { Lectura = r.Estado, Panel = ConstructorVista.EsperandoAms2() };
             case EstadoLectura.VersionDistinta:
-                _ctx = null; _ultimaSecuencia = null; _huboSesion = false;
+                _ctx = null; _ultimaSecuencia = null; _huboSesion = false; _freno = 0;
                 return _ultima = new VistaOverlay { Lectura = r.Estado, Panel = ConstructorVista.VersionNoCompatible(r.Version) };
             case EstadoLectura.Ok:
                 return Procesar(r.Datos, segundos);
@@ -146,16 +161,19 @@ public sealed class ServicioOverlay
         bool valida = sm.mPitModes[visto] == 0 && double.IsFinite(d) && double.IsFinite(kmh);
         var pg = _motor.Actualizar(new EntradaGuia(t, d, kmh, largo, valida));
 
-        var vista = ConstructorVista.Construir(pg, new ContextoVista(ctx.Clase, ctx.Pista, ctx.Variante, largo, RojoSuave));
+        var vista = ConstructorVista.Construir(pg, new ContextoVista(ctx.Clase, ctx.Pista, ctx.Variante, largo));
         if (_modo == ModoApp.Grabar && vista.Tipo is TipoTarjeta.SinDatos or TipoTarjeta.Lejos)
             vista = Contadores(sm, ctx, visto);
 
+        // mBrake: pedal del auto visto (0..1). Si el valor no sirve se toma como "no frena".
+        _freno = float.IsFinite(sm.mBrake) ? Math.Clamp(sm.mBrake, 0f, 1f) : 0;
+
         return _ultima = new VistaOverlay
         {
-            Lectura = EstadoLectura.Ok, Panel = vista, Guia = pg, Mapa = _mapa,
-            TituloMapa = ctx.Variante.Length == 0 ? ctx.Pista : $"{ctx.Pista} · {ctx.Variante}",
+            Lectura = EstadoLectura.Ok, Panel = vista, Guia = pg,
+            TituloPista = ctx.Variante.Length == 0 ? ctx.Pista : $"{ctx.Pista} · {ctx.Variante}",
             ChipClase = ctx.Clase, Grabando = _modo == ModoApp.Grabar,
-            DistanciaM = valida ? d : null, Pitar = _pitido.Debe(pg), Aviso = _avisoGrabacion,
+            Freno = _freno, Pitar = _pitido.Debe(pg), Aviso = _avisoGrabacion,
         };
     }
 
@@ -171,7 +189,6 @@ public sealed class ServicioOverlay
         }
         _datos = SelectorDatos.Cargar(_almacen, _ctx);
         _motor.CargarDatos(_datos.Clase, _datos.Mapa);
-        _mapa = ProyeccionMapa.Crear(_datos.Mapa, _datos.Clase);
     }
 
     private VistaPanel Contadores(in SharedMemory sm, ContextoJuego ctx, int visto)
@@ -188,7 +205,6 @@ public sealed class ServicioOverlay
             if (Texto.Leer(arr) == ctx.Clase) autos++;
         }
         var otras = enPista.Where(e => e.Clase != ctx.Clase).Select(e => e.Clase).ToList();
-        bool mapaOk = _datos.Mapa is { Puntos.Count: >= 2 };
         string pie = "Parar de grabar: Bandeja › Modo › Mostrar.";
         if (otras.Count > 0) pie = $"Otras clases en pista ({string.Join(", ", otras)}) también se graban. " + pie;
         return new VistaPanel
@@ -198,7 +214,6 @@ public sealed class ServicioOverlay
                 Encabezado: ctx.Clase,
                 Ia: (mia?.VueltasIa ?? 0).ToString(), IaDetalle: $"vueltas · {autos} autos",
                 Vos: (mia?.VueltasVos ?? 0).ToString(), VosDetalle: "vueltas válidas",
-                Mapa: mapaOk ? "OK" : "…", MapaDetalle: mapaOk ? "trazado completo" : "falta trazar",
                 Pie: pie),
         };
     }

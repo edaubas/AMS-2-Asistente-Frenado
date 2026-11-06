@@ -14,9 +14,6 @@ public static class Paleta
     public const string Ambar = "#FFC24D";
     public const string RojoFranja = "#C62F26";
     public const string FranjaNeutra = "#3B4652";
-    public const string RojoSuaveFranja = "#5A1D19";
-    public const string RojoSuaveTexto = "#FF9C94";
-    public const string RojoSuaveContorno = "#C62F26";
     public const string ReglaFondo = "#232A31";
     public const string ReglaBase = "#33414E";
     public const string ReglaMarcas = "#4A5561";
@@ -24,7 +21,8 @@ public static class Paleta
     public const string ChipMostrarFondo = "#1E3A2A", ChipMostrarTexto = "#8EE0A9";
     public const string ChipGrabandoFondo = "#4A1F1C", ChipGrabandoTexto = "#FF9C94", ChipGrabandoPunto = "#FF5A4E";
     public const string ChipDesbloqueadoFondo = "#17304D", ChipDesbloqueadoTexto = "#8CC3FF";
-    public const string MapaTrazo = "#C3CAD1", MapaBorde = "#56616C", MapaHalo = "#0C0E11";
+    /// <summary>Aviso de frenada: simbolo rojo con contorno oscuro fino (UI-SPEC 2.1).</summary>
+    public const string AvisoRojo = "#E53935", AvisoContorno = "#0C0E11";
 }
 
 /// <summary>Medidas en px = DIP a 96 dpi (docs/UI-SPEC.md, 3.2).</summary>
@@ -34,12 +32,9 @@ public static class MedidasUi
     public const double EscalaMinima = 0.75, EscalaMaxima = 1.5;
     public const double Margen = 24;
     public const double AltoFranja = 40;
-    public const double MapaAncho = 296, MapaAlto = 190;
-    public const double EscalaMapaCompacto = 0.75;
 
     /// <summary>Rango del fondo: el texto nunca se atenua (UI-SPEC 3.3).</summary>
     public const double AlfaMinimo = 0.80, AlfaMaximo = 0.95, AlfaPorDefecto = 0.88;
-    public const double AlfaMapaMenos = 0.04;
 
     public static double LimitarEscala(double e) => double.IsFinite(e) ? Math.Clamp(e, EscalaMinima, EscalaMaxima) : 1.0;
     public static double LimitarAlfa(double a) => double.IsFinite(a) ? Math.Clamp(a, AlfaMinimo, AlfaMaximo) : AlfaPorDefecto;
@@ -53,9 +48,18 @@ public static class MedidasUi
 
     /// <summary>Alfa efectivo del fondo del panel: 100 % mientras la ventana esta desbloqueada.</summary>
     public static double AlfaPanel(double alfaConfig, bool desbloqueada) => desbloqueada ? 1.0 : LimitarAlfa(alfaConfig);
-    /// <summary>El mapa es 0,04 mas transparente que el panel (0,84 contra 0,88), sin salir del rango.</summary>
-    public static double AlfaMapa(double alfaConfig, bool desbloqueada)
-        => desbloqueada ? 1.0 : Math.Clamp(LimitarAlfa(alfaConfig) - AlfaMapaMenos, AlfaMinimo, AlfaMaximo);
+}
+
+/// <summary>Medidas de la ventana del aviso de frenada (px = DIP a 96 dpi, UI-SPEC 2.1).</summary>
+public static class MedidasAviso
+{
+    /// <summary>Lado del simbolo a escala 100 %.</summary>
+    public const double LadoBase = 120;
+    public const double EscalaMinima = 0.5, EscalaMaxima = 3.0;
+
+    public static double LimitarEscala(double e) => double.IsFinite(e) ? Math.Clamp(e, EscalaMinima, EscalaMaxima) : 1.0;
+    public static double LadoDeEscala(double escala) => LadoBase * LimitarEscala(escala);
+    public static double EscalaDeLado(double lado) => LimitarEscala(lado / LadoBase);
 }
 
 /// <summary>Reglas de tiempo anti-parpadeo de la interfaz (UI-SPEC 3.5).</summary>

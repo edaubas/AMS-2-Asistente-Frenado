@@ -25,6 +25,56 @@ public sealed class OverlayConfigTests : IDisposable
         Assert.Equal(1.0, c.Escala);
         Assert.Equal(0.88, c.Opacidad);
         Assert.False(c.AvisoInicialMostrado);
+        Assert.True(c.AvisoActivo);                   // el aviso de frenada viene activado
+        Assert.Equal(1.5, c.AvisoDuracionS);
+        Assert.Equal(1.0, c.AvisoEscala);
+    }
+
+    [Fact]
+    public void ElAvisoSeNormalizaYUnConfigDeLaFase5ConCamposViejosSeLee()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Ruta)!);
+        File.WriteAllText(Ruta, """
+            { "formato": 1, "modo": "grabar", "mapaVisible": false, "mapaCompacto": true, "rojoSuave": true,
+              "avisoDuracionS": 9, "avisoEscala": 0.1, "escala": 1.25 }
+            """);
+        var c = new AlmacenConfig(Ruta).Cargar();
+        Assert.Equal(ModoApp.Grabar, c.Modo);
+        Assert.Equal(1.25, c.Escala);
+        Assert.Equal(2.0, c.AvisoDuracionS);           // 1 a 2 s
+        Assert.Equal(0.5, c.AvisoEscala);              // 50 a 300 %
+        // y al guardar no reaparecen los campos que ya no existen
+        new AlmacenConfig(Ruta).Guardar(c);
+        string txt = File.ReadAllText(Ruta);
+        Assert.DoesNotContain("mapaVisible", txt);
+        Assert.DoesNotContain("rojoSuave", txt);
+    }
+
+    [Fact]
+    public void AvisoEscalaYLado()
+    {
+        Assert.Equal(120, MedidasAviso.LadoDeEscala(1));
+        Assert.Equal(60, MedidasAviso.LadoDeEscala(0));
+        Assert.Equal(360, MedidasAviso.LadoDeEscala(99));
+        Assert.Equal(0.5, MedidasAviso.EscalaDeLado(10));
+        Assert.Equal(2.0, MedidasAviso.EscalaDeLado(240));
+        Assert.Equal(1.0, MedidasAviso.LimitarEscala(double.NaN));
+    }
+
+    [Fact]
+    public void CopiarDeLlevaTodosLosValores()
+    {
+        var o = new ConfigApp { Modo = ModoApp.Grabar, Pitido = true, AvisoActivo = false, AvisoEscala = 2, Opacidad = 0.95 };
+        o.Posiciones["m"] = new PosicionVentana { X = 1, Y = 2 };
+        var c = new ConfigApp();
+        c.CopiarDe(o);
+        Assert.Equal(ModoApp.Grabar, c.Modo);
+        Assert.True(c.Pitido);
+        Assert.False(c.AvisoActivo);
+        Assert.Equal(2, c.AvisoEscala);
+        Assert.Equal(0.95, c.Opacidad);
+        Assert.Equal(1, c.Posiciones["m"].X);
+        Assert.NotSame(o.Posiciones, c.Posiciones);
     }
 
     [Fact]
@@ -34,7 +84,8 @@ public sealed class OverlayConfigTests : IDisposable
         var c = a.Cargar();
         c.Modo = ModoApp.Grabar; c.Bloqueado = false; c.Pitido = true; c.ReferenciaPrincipal = ReferenciaGuia.Vos;
         c.Esquina = Esquina.AbajoIzquierda; c.Escala = 1.25; c.Opacidad = 0.92; c.Atajo = "Ctrl+Shift+F9";
-        c.RojoSuave = true; c.MapaCompacto = true; c.AvisoInicialMostrado = true;
+        c.AvisoActivo = false; c.AvisoDuracionS = 1.8; c.AvisoEscala = 2.5; c.AvisoInicialMostrado = true;
+        c.AvisoPosiciones["\\\\.\\DISPLAY1"] = new PosicionVentana { X = 800, Y = 300 };
         c.Posiciones["\\\\.\\DISPLAY1"] = new PosicionVentana { X = 100.5, Y = 40 };
         a.Guardar(c);
 
@@ -50,7 +101,11 @@ public sealed class OverlayConfigTests : IDisposable
         Assert.Equal(1.25, r.Escala);
         Assert.Equal(0.92, r.Opacidad);
         Assert.Equal("Ctrl+Shift+F9", r.Atajo);
-        Assert.True(r.RojoSuave && r.MapaCompacto && r.AvisoInicialMostrado);
+        Assert.True(r.AvisoInicialMostrado);
+        Assert.False(r.AvisoActivo);
+        Assert.Equal(1.8, r.AvisoDuracionS);
+        Assert.Equal(2.5, r.AvisoEscala);
+        Assert.Equal(800, r.AvisoPosiciones["\\\\.\\DISPLAY1"].X);
         Assert.Equal(100.5, r.Posiciones["\\\\.\\DISPLAY1"].X);
     }
 
@@ -86,6 +141,7 @@ public sealed class OverlayConfigTests : IDisposable
     public void CamposInvalidosSeCorrigenUnoPorUno()
     {
         Directory.CreateDirectory(_dir);
+        Directory.CreateDirectory(Path.GetDirectoryName(Ruta)!);
         File.WriteAllText(Ruta, """
             { "modo": "otraCosa", "escala": 9, "opacidad": 0.1, "pitido": true, "atajo": "L",
               "esquina": 7, "referenciaPrincipal": "vos", "posiciones": { "m1": { "x": 5, "y": 6 } } }
@@ -147,8 +203,6 @@ public sealed class OverlayConfigTests : IDisposable
         Assert.Equal(0.80, MedidasUi.AlfaDeSlider(-3), 6);
         Assert.Equal(0.5, MedidasUi.SliderDeAlfa(0.875), 6);
         Assert.Equal(1.0, MedidasUi.AlfaPanel(0.8, desbloqueada: true));     // desbloqueada: 100 %
-        Assert.Equal(0.84, MedidasUi.AlfaMapa(0.88, false), 6);
-        Assert.Equal(0.80, MedidasUi.AlfaMapa(0.80, false), 6);              // el mapa tampoco sale del rango
         Assert.Equal(320, MedidasUi.AnchoDeEscala(1));
         Assert.Equal(240, MedidasUi.AnchoDeEscala(0.1));
         Assert.Equal(480, MedidasUi.AnchoDeEscala(9));

@@ -5,7 +5,7 @@ using AMS2Frenado.Core.Guia;
 namespace AMS2Frenado.Core.Overlay;
 
 /// <summary>Datos que la guia no trae y la vista necesita.</summary>
-public sealed record ContextoVista(string Clase = "", string Pista = "", string Variante = "", double LargoPista = 0, bool RojoSuave = false);
+public sealed record ContextoVista(string Clase = "", string Pista = "", string Variante = "", double LargoPista = 0);
 
 public static class FormatoUi
 {
@@ -70,23 +70,18 @@ public static class ConstructorVista
         bool frenada = p.Tipo == TipoCurva.Frenada;
         bool hayFranja = p.Estado is EstadoPanel.Frena or EstadoPanel.Toque or EstadoPanel.Levanta;
         string? colorFranja = null, colorTextoFranja = null;
-        bool contorno = false;
         if (hayFranja)
         {
-            bool roja = p.Estado == EstadoPanel.Frena;
-            colorFranja = !roja ? Paleta.FranjaNeutra : c.RojoSuave ? Paleta.RojoSuaveFranja : Paleta.RojoFranja;
-            colorTextoFranja = roja && c.RojoSuave ? Paleta.RojoSuaveTexto : Paleta.Blanco;
-            contorno = roja && c.RojoSuave;
+            colorFranja = p.Estado == EstadoPanel.Frena ? Paleta.RojoFranja : Paleta.FranjaNeutra;
+            colorTextoFranja = Paleta.Blanco;
         }
 
         string? numero, unidad, numeroSec = null, unidadSec = null;
         bool muestraSec;
         if (frenada)
         {
-            numero = p.CartelPrincipal?.ToString(CultureInfo.InvariantCulture) ?? "—";
-            unidad = "m";
-            muestraSec = p.CartelSecundario is not null && p.Secundaria is not null;
-            if (muestraSec) { numeroSec = p.CartelSecundario!.Value.ToString(CultureInfo.InvariantCulture); unidadSec = "m"; }
+            // el cartel (200 m) ya no se muestra: se leia como cuenta regresiva (docs/CARTELES.md)
+            numero = null; unidad = null; muestraSec = false;
         }
         else
         {
@@ -104,6 +99,7 @@ public static class ConstructorVista
             : [EtiquetaRef.De(principal)];
 
         bool aproximando = p.Estado is EstadoPanel.Aproximacion or EstadoPanel.Inminente;
+        // en FRENA el cuerpo conserva las velocidades de entrada y vertice, sin regla ni cuenta regresiva
         bool inminente = p.Estado == EstadoPanel.Inminente;
         string? metros = p.Estado switch
         {
@@ -115,12 +111,11 @@ public static class ConstructorVista
         {
             Tipo = TipoTarjeta.Guia, Estado = p.Estado, IndiceCurva = p.IndiceCurva,
             TextoFranja = hayFranja ? p.TextoEstado : null,
-            ColorFranja = colorFranja, ColorTextoFranja = colorTextoFranja, ContornoRojo = contorno,
+            ColorFranja = colorFranja, ColorTextoFranja = colorTextoFranja,
             CurvaTxt = p.NombreCurva.ToUpperInvariant(),
-            VelocidadesTxt = aproximando ? Velocidades(p, principal) : null,
+            VelocidadesTxt = frenada && (aproximando || p.Estado == EstadoPanel.Frena) ? Velocidades(p, principal) : null,
             EtiquetasPrincipal = etiquetas,
             NumeroPrincipal = numero, UnidadPrincipal = unidad,
-            ColorNumero = inminente ? Paleta.Ambar : Paleta.Blanco,
             EtiquetaSecundaria = muestraSec && p.Secundaria is { } s ? EtiquetaRef.De(s) : null,
             NumeroSecundario = numeroSec, UnidadSecundaria = unidadSec,
             MostrarRegla = aproximando,

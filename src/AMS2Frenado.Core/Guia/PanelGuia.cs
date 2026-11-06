@@ -11,7 +11,7 @@ public enum ReferenciaGuia { Ia, Vos }
 public sealed record PanelGuia
 {
     public EstadoPanel Estado { get; init; }
-    /// <summary>Falso en Lejos: se ve solo el mapa y la linea "Proxima CURVA N". SinDatos si se ve (dice "SIN DATOS").</summary>
+    /// <summary>Falso en Lejos: se ve solo la linea "Proxima CURVA N". SinDatos si se ve (dice "SIN DATOS").</summary>
     public bool Visible { get; init; }
     /// <summary>Lo decide el modo (fase 5); la guia solo lo pasa. No cambia el estado.</summary>
     public bool Grabando { get; init; }
@@ -43,7 +43,7 @@ public sealed record PanelGuia
 
     /// <summary>"FRENÁ", "TOQUE", "LEVANTÁ", "SIN DATOS" o vacio.</summary>
     public string TextoEstado { get; init; } = "";
-    /// <summary>Numero grande: "200 m" (frenada) o "132 km/h" (toque y levanta).</summary>
+    /// <summary>"200 m" (frenada; el cartel ya no se muestra en la UI, ver docs/CARTELES.md) o "132 km/h" (toque y levanta).</summary>
     public string? TextoPrincipal { get; init; }
     public string? TextoSecundario { get; init; }
     /// <summary>Linea chica: "Próxima CURVA 3 · 410 m" en Lejos; metros hasta frenar en el resto (null en Levanta).</summary>

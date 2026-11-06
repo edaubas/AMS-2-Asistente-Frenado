@@ -77,7 +77,7 @@ public sealed class OverlayServicioTests : IDisposable
         Assert.Equal("SIN DATOS", v.Panel.Titulo);
         Assert.Contains("GT3", v.Panel.Linea1);
         Assert.Contains("Demo Circuit · GP", v.Panel.Linea1);
-        Assert.Equal("Demo Circuit · GP", v.TituloMapa);
+        Assert.Equal("Demo Circuit · GP", v.TituloPista);
         Assert.Equal("GT3", v.ChipClase);
         Assert.False(v.Grabando);
     }
@@ -112,17 +112,12 @@ public sealed class OverlayServicioTests : IDisposable
         Assert.Contains(vistas, v => v.Panel.Estado == EstadoPanel.Inminente);
         var frena = vistas.Where(v => v.Panel.Estado == EstadoPanel.Frena).ToList();
         Assert.NotEmpty(frena);
-        Assert.All(frena, v => { Assert.Equal("FRENÁ", v.Panel.TextoFranja); Assert.Equal("#C62F26", v.Panel.ColorFranja); Assert.NotNull(v.Panel.NumeroPrincipal); });
+        Assert.All(frena, v => { Assert.Equal("FRENÁ", v.Panel.TextoFranja); Assert.Equal("#C62F26", v.Panel.ColorFranja); Assert.Null(v.Panel.NumeroPrincipal); Assert.NotNull(v.Panel.VelocidadesTxt); });
         Assert.Contains(vistas, v => v.Panel.Estado == EstadoPanel.Toque && v.Panel.ColorFranja == "#3B4652");
         Assert.Contains(vistas, v => v.Panel.Estado == EstadoPanel.Levanta);
 
-        // el mapa viene de mapa.json y tiene marcadores de las curvas
-        var mapa = vistas[^1].Mapa;
-        Assert.False(mapa.EstaVacio);
-        Assert.NotEmpty(mapa.Marcadores);
-        Assert.Contains(mapa.Marcadores, m => m.Hueco);        // toque / levanta
-        Assert.Contains(mapa.Marcadores, m => !m.Hueco);       // frenadas
-        Assert.NotNull(vistas[^1].DistanciaM);
+        // el mapa.json se sigue guardando aunque ya no se dibuje
+        Assert.NotNull(new Almacen(_dir).LeerMapa("Demo Circuit", "GP"));
 
         // las cifras que se ven cambian como maximo a 10 Hz mientras la tarjeta es la misma
         var su = new Suavizador();
@@ -132,7 +127,7 @@ public sealed class OverlayServicioTests : IDisposable
             double t = 1000 + k / 30.0;
             var c = su.Actualizar(vistas[k].Panel, t);
             Assert.InRange(c.OpacidadTarjeta, 0, 1);
-            string clave = $"{c.Panel.Estado}{c.Panel.IndiceCurva}{c.Panel.NumeroPrincipal}";
+            string clave = $"{c.Panel.Estado}{c.Panel.IndiceCurva}";
             if (clave == ultClave && c.Panel.Tipo == TipoTarjeta.Guia && c.Panel.Metros != ultMetros && tUlt is double tu)
                 Assert.True(t - tu >= TiemposUi.PeriodoCifrasS - 1e-9, $"cifra cambio en {t - tu:0.000} s");
             if (clave != ultClave || c.Panel.Metros != ultMetros) tUlt = t;
@@ -173,7 +168,7 @@ public sealed class OverlayServicioTests : IDisposable
         var a = s.Paso(Ok(sm), 5000);
         var b = s.Paso(Ok(sm), 5000.016);        // misma mSequenceNumber
         Assert.Equal(a.Panel.Firma, b.Panel.Firma);
-        Assert.Equal(a.DistanciaM, b.DistanciaM);
+        Assert.Equal(a.Freno, b.Freno);
         Assert.False(b.Pitar);
     }
 
@@ -203,35 +198,5 @@ public sealed class OverlayServicioTests : IDisposable
         Assert.Equal(new ContextoJuego("Silverstone", "Grand Prix", "GT3"), c);
         Muestras.Texto(sm.mTrackLocation, "");
         Assert.Null(ContextoJuego.De(sm));
-    }
-
-    [Fact]
-    public void MapaProyectadoEntraEnElCuadroYSeUbicaElAuto()
-    {
-        var mapa = new MapaPista { Pista = "P", Variante = "V", Largo = 1000, Paso = 5 };
-        for (int d = 0; d < 1000; d += 5)
-        {
-            double a = 2 * Math.PI * d / 1000;
-            mapa.Puntos.Add(new PuntoMapa { D = d, X = 300 * Math.Cos(a) + 50, Z = 100 * Math.Sin(a) - 20 });
-        }
-        var datos = new DatosClase { Largo = 1000, Curvas = [
-            new CurvaGuardada { Nombre = "Curva 1", Tipo = "frenada", Ia = new BloqueCurva { FrenarEn = 250, Vertice = 300, Vueltas = 20 }, Vos = new BloqueCurva { FrenarEn = 255, Vertice = 300, Vueltas = 3 } },
-            new CurvaGuardada { Nombre = "Curva 2", Tipo = "toque", Vos = new BloqueCurva { FrenarEn = 600, Vertice = 640, Vueltas = 3 } },
-        ] };
-        var v = ProyeccionMapa.Crear(mapa, datos);
-        Assert.All(v.Trazo, p => { Assert.InRange(p.X, 0, v.Ancho); Assert.InRange(p.Y, 0, v.Alto); });
-        Assert.Equal(3, v.Marcadores.Count);
-        var ia = v.Marcadores.Single(m => m.Forma == FormaMarcador.Rombo);
-        Assert.False(ia.Hueco);
-        Assert.True(v.Marcadores.Single(m => m.IndiceCurva == 1).Hueco);
-        var vos1 = v.Marcadores.Single(m => m.IndiceCurva == 0 && m.Forma == FormaMarcador.Circulo);
-        Assert.NotEqual(ia.X, vos1.X);                         // el de vos se desplaza para no tapar a la IA
-        Assert.Equal("IA · 20 vueltas", v.LeyendaIa);
-        Assert.Equal("Vos · 3 vueltas", v.LeyendaVos);
-        var p0 = v.Posicion(0)!.Value; var pFin = v.Posicion(1000)!.Value;
-        Assert.Equal(p0.X, pFin.X, 6);
-        Assert.NotNull(v.Posicion(997));                       // tramo de cierre de vuelta
-        Assert.True(ProyeccionMapa.Crear(null, null).EstaVacio);
-        Assert.Null(VistaMapa.Vacio.Posicion(10));
     }
 }
