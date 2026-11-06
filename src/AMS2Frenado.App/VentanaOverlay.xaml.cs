@@ -320,7 +320,7 @@ public partial class VentanaOverlay : Window
         bool grab = v.Grabando;
         ChipModo.Background = Pincel.De(grab ? Paleta.ChipGrabandoFondo : Paleta.ChipMostrarFondo);
         TxtChipModo.Foreground = Pincel.De(grab ? Paleta.ChipGrabandoTexto : Paleta.ChipMostrarTexto);
-        TxtChipModo.Text = grab ? (v.SoloVos ? "GRABANDO · SOLO VOS" : "GRABANDO") : "MOSTRAR";
+        TxtChipModo.Text = v.TextoChipModo;
         PuntoChipModo.Visibility = grab ? Visibility.Visible : Visibility.Collapsed;
         TxtAviso.Visibility = v.Aviso is null ? Visibility.Collapsed : Visibility.Visible;
         TxtAviso.Text = v.Aviso ?? "";

@@ -18,6 +18,8 @@ public sealed record VistaOverlay
     public bool Grabando { get; init; }
     /// <summary>Modo "Grabar solo vos": la IA no se graba (chip "GRABANDO · SOLO VOS").</summary>
     public bool SoloVos { get; init; }
+    /// <summary>Texto del chip del modo en la cabecera: MOSTRAR, GRABANDO o GRABANDO · SOLO VOS.</summary>
+    public string TextoChipModo => Grabando ? (SoloVos ? "GRABANDO · SOLO VOS" : "GRABANDO") : "MOSTRAR";
     /// <summary>Pedal de freno del auto visto, 0..1 (0 sin lectura valida).</summary>
     public double Freno { get; init; }
     /// <summary>Verdadero solo en el tick en que hay que pitar.</summary>
@@ -73,8 +75,15 @@ public sealed class ServicioOverlay
             _modo = value;
             _tRecarga = double.NegativeInfinity;      // al volver a mostrar, recarga lo recien grabado
             _ultimaSecuencia = null;
+            _ultima = ConModo(_ultima);               // el chip del modo cambia ya, sin esperar una lectura valida del juego
         }
     }
+
+    /// <summary>
+    /// El chip del modo (MOSTRAR / GRABANDO / GRABANDO · SOLO VOS) refleja SIEMPRE el modo configurado, venga o no una lectura
+    /// valida de AMS2 (correccion de errores 1: antes solo se armaba en <see cref="Procesar"/> y sin juego quedaba en MOSTRAR).
+    /// </summary>
+    private VistaOverlay ConModo(VistaOverlay v) => v with { Grabando = EsGrabacion(_modo), SoloVos = _modo == ModoApp.GrabarSoloVos };
 
     private static bool EsGrabacion(ModoApp m) => m is ModoApp.Grabar or ModoApp.GrabarSoloVos;
 
@@ -128,7 +137,9 @@ public sealed class ServicioOverlay
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _avisoGrabacion = "No se pudo guardar: " + e.Message; }
     }
 
-    public VistaOverlay Paso(ResultadoLectura r, double segundos)
+    public VistaOverlay Paso(ResultadoLectura r, double segundos) => _ultima = ConModo(PasoLectura(r, segundos));
+
+    private VistaOverlay PasoLectura(ResultadoLectura r, double segundos)
     {
         switch (r.Estado)
         {
