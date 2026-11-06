@@ -207,7 +207,7 @@ internal sealed class Bandeja : IDisposable
     private Dibujo.Bitmap? _base;
     private bool _baseIntentada;
 
-    /// <summary>El icono de la app (2 + AF) a 32 px, tomado del .ico embebido. Null si no se pudo leer (se usa el dibujo de respaldo).</summary>
+    /// <summary>El icono de la app (ficha roja con 2) a 32 px, tomado del .ico embebido. Null si no se pudo leer (se usa el dibujo de respaldo).</summary>
     private Dibujo.Bitmap? BaseIcono()
     {
         if (_baseIntentada) return _base;
