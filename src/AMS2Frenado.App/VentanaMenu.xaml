@@ -313,7 +313,8 @@
                 <Button x:Name="BtnAbrirDatos" Style="{StaticResource Fila}" Content="Abrir carpeta de datos" Margin="0,0,0,6"/>
                 <Button x:Name="BtnAbrirCapturas" Style="{StaticResource Fila}" Content="Abrir carpeta de capturas" Margin="0,0,0,6"/>
                 <Button x:Name="BtnExportar" Style="{StaticResource Fila}" Content="Exportar datos…" Margin="0,0,0,6"/>
-                <Button x:Name="BtnImportar" Style="{StaticResource Fila}" Content="Importar datos…"/>
+                <Button x:Name="BtnImportar" Style="{StaticResource Fila}" Content="Importar datos…" Margin="0,0,0,6"/>
+                <Button x:Name="BtnRegistro" Style="{StaticResource Fila}" Content="Guardar registro de diagnóstico"/>
             </StackPanel>
 
             <!-- ============ pagina Atajo de bloqueo ============ -->

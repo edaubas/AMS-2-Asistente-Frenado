@@ -71,14 +71,20 @@ internal sealed class ControladorApp : IDisposable
     {
         PosicionInicial();
         PosicionInicialAviso();
-        _ventana.Show();                      // la ventana grande queda siempre abierta: "ocultar" solo esconde su contenido, asi la barra (su Owner) puede dejar la pastilla
+        Diag.Registro.Escribir("arranque", $"config: visible={_cfg.Visible} bloqueado={_cfg.Bloqueado} escala={_cfg.Escala:0.##} modo={_cfg.Modo} anclada={_anclada} posiciones={_cfg.Posiciones.Count}");
+        ConectarRegistroVentana("grande", _ventana);
+        ConectarRegistroVentana("aviso", _aviso);
+        _ventana.Show();
+        Diag.Evento("grande", "mostrada", _ventana);                      // la ventana grande queda siempre abierta: "ocultar" solo esconde su contenido, asi la barra (su Owner) puede dejar la pastilla
         _ventana.AplicarVisible(_cfg.Visible);
         _barra = new VentanaBarra(_ventana);
+        ConectarRegistroVentana("barra", _barra);
         _barra.Pulsado += AlPulsarBoton;
         _barra.ModoElegido += AlElegirModoPopover;
         _barra.CierreConfirmado += () => { if (_modeloBarra.ConfirmarCierre() == AccionBarra.CerrarApp) Salir(); };
         _barra.CierreCancelado += () => { _modeloBarra.CancelarCierre(); SincronizarBarra(); };
         _menu = new VentanaMenu { Reloj = () => _reloj.Elapsed.TotalSeconds, AreaEn = AreaEnPunto };
+        ConectarRegistroVentana("menu", _menu);
         if (_cfg.AjustesPosicion is { } ap) _posAjustes.Elegir(ap.X, ap.Y);
         _menu.PosicionElegida += (x, y) =>
         {
@@ -90,14 +96,17 @@ internal sealed class ControladorApp : IDisposable
         ConectarMenu();
         SincronizarBarra();
         _barra.Show();
+        Diag.Evento("barra", "mostrada", _barra);
         _menu.Owner = _barra;
         // la ventana del aviso queda abierta y transparente (opacidad 0): asi no hay parpadeo al aparecer, solo el fundido
         _aviso.Show();
+        Diag.Evento("aviso", "mostrada", _aviso);
 
         bool atajoOk = _atajo.Registrar(_cfg.AtajoEfectivo);
         _bandeja.Actualizar(_cfg, _atajo.Actual);
         RefrescarMenu();
         _timer.Start();
+        Diag.Registro.Escribir("arranque", $"timer iniciado; atajo registrado={atajoOk}");
 
         if (!atajoOk)
             _bandeja.Globo("Atajo no disponible",
@@ -118,12 +127,14 @@ internal sealed class ControladorApp : IDisposable
 
     private void Tick()
     {
+        long inicio = Stopwatch.GetTimestamp();
         try
         {
             double t = _reloj.Elapsed.TotalSeconds;
             ResultadoLectura r;
             try { r = _lector.Leer(); }
-            catch (Exception) { r = ResultadoLectura.SinJuego; }
+            catch (Exception e) { Diag.Registro.Error("Leer", e); r = ResultadoLectura.SinJuego; }
+            if (Diag.Registro.Activo) Diag.Registro.Cambio("lectura", "estado", r.Estado.ToString());
 
             var v = _servicio.Paso(r, t);
             if (v.Pitar) _pitido.Reproducir();
@@ -152,7 +163,45 @@ internal sealed class ControladorApp : IDisposable
         {
             // el overlay nunca debe tirar la app abajo en plena carrera
             Debug.WriteLine(e);
+            Diag.Registro.Error("Tick", e);
         }
+        finally
+        {
+            if (Diag.Registro.Activo) RegistrarTick(Stopwatch.GetElapsedTime(inicio).TotalMilliseconds);
+        }
+    }
+
+    // ---------------------------------------------------------------- registro de diagnostico (apagado por defecto; ver Diag)
+
+    private bool _primerTickAnotado;
+    private double _ultimaFotoVentanas = double.NegativeInfinity;
+
+    private void RegistrarTick(double ms)
+    {
+        double t = _reloj.Elapsed.TotalSeconds;
+        if (!_primerTickAnotado) { _primerTickAnotado = true; Diag.Registro.Escribir("arranque", $"primer tick a los {t:0.00} s (duro {ms:0} ms)"); }
+        Diag.Registro.Tick(ms);
+        // foto de las cuatro ventanas una vez por segundo; solo se anota lo que cambio (Visibility, Topmost, posicion, tamano, monitor)
+        if (t - _ultimaFotoVentanas < 1) return;
+        _ultimaFotoVentanas = t;
+        Diag.Ventana("grande", _ventana); Diag.Ventana("barra", _barra); Diag.Ventana("aviso", _aviso); Diag.Ventana("menu", _menu);
+    }
+
+    private static void ConectarRegistroVentana(string nombre, Window w)
+    {
+        w.IsVisibleChanged += (_, ev) => Diag.Evento(nombre, (bool)ev.NewValue ? "ahora visible" : "ahora NO visible", w);
+        w.SourceInitialized += (_, _) => Diag.Evento(nombre, "HWND creado", w);
+        w.Closed += (_, _) => Diag.Registro.Escribir("ventana", nombre + " cerrada");
+    }
+
+    private void AlternarRegistro()
+    {
+        Diag.Registro.Activo = !Diag.Registro.Activo;
+        if (Diag.Registro.Activo) Diag.Registro.Escribir("registro", "ruta: " + Diag.Registro.Ruta);
+        _bandeja.MarcarRegistro(Diag.Registro.Activo);
+        _menu?.MarcarRegistro(Diag.Registro.Activo);
+        _bandeja.Globo("Registro de diagnóstico",
+            Diag.Registro.Activo ? "Activado. Se guarda en registro.log (⚙ › Datos › Abrir carpeta de datos)." : "Desactivado.");
     }
 
     // ---------------------------------------------------------------- config
@@ -218,6 +267,7 @@ internal sealed class ControladorApp : IDisposable
         _bandeja.ExportarDatos += ExportarDatos;
         _bandeja.ImportarDatos += ImportarDatos;
         _bandeja.AbrirDiagnostico += AbrirDiagnostico;
+        _bandeja.AlternarRegistro += AlternarRegistro;
         _bandeja.Salir += Salir;
     }
 
@@ -384,6 +434,7 @@ internal sealed class ControladorApp : IDisposable
         _menu.ExportarDatos += ExportarDatos;
         _menu.ImportarDatos += ImportarDatos;
         _menu.AbrirDiagnostico += AbrirDiagnostico;
+        _menu.AlternarRegistro += AlternarRegistro;
         _menu.SalirConfirmado += Salir;
         // deslizadores: se aplican en vivo y el config.json se guarda 500 ms despues del ultimo cambio (no en cada movimiento)
         _menu.Deslizado += (def, valor) =>
@@ -599,7 +650,9 @@ internal sealed class ControladorApp : IDisposable
 
     private void Salir()
     {
+        Diag.Registro.Escribir("salida", "Salir() pedido");
         Dispose();
+        Diag.Registro.Escribir("salida", "Dispose terminó; Shutdown()");
         System.Windows.Application.Current.Shutdown();
     }
 

@@ -21,7 +21,7 @@ internal sealed class Bandeja : IDisposable
     private readonly Forms.ContextMenuStrip _menu = new();
     private Dibujo.Icon? _iconoActual;
 
-    private Forms.ToolStripMenuItem _bloquear = null!, _mostrar = null!, _pitido = null!, _aviso = null!;
+    private Forms.ToolStripMenuItem _bloquear = null!, _mostrar = null!, _pitido = null!, _aviso = null!, _registro = null!;
     private readonly Dictionary<ModoApp, Forms.ToolStripMenuItem> _modos = [];
     private readonly Dictionary<ReferenciaGuia, Forms.ToolStripMenuItem> _refs = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _escalasAviso = [];
@@ -35,7 +35,7 @@ internal sealed class Bandeja : IDisposable
     public static readonly string[] AtajosSugeridos = MenuConfig.AtajosSugeridos;
 
     public event Action? AlternarBloqueo, AlternarVisible, AlternarPitido, AlternarAviso, ProbarAviso, ProbarPitido;
-    public event Action? AbrirCarpeta, AbrirCarpetaCapturas, ExportarDatos, ImportarDatos, AbrirDiagnostico, Salir;
+    public event Action? AbrirCarpeta, AbrirCarpetaCapturas, ExportarDatos, ImportarDatos, AbrirDiagnostico, AlternarRegistro, Salir;
     public event Action<ModoApp>? ModoElegido;
     public event Action<ReferenciaGuia>? ReferenciaElegida;
     public event Action<double>? EscalaElegida, EscalaAvisoElegida, DuracionAvisoElegida, RampaAvisoElegida, AnticipacionElegida;
@@ -161,6 +161,9 @@ internal sealed class Bandeja : IDisposable
         datos.DropDownItems.Add(Item("Importar datos…", () => ImportarDatos?.Invoke()));
         _menu.Items.Add(datos);
         _menu.Items.Add(Item("Diagnóstico…", () => AbrirDiagnostico?.Invoke()));
+        _registro = Item("Guardar registro de diagnóstico", () => AlternarRegistro?.Invoke());
+        _registro.Checked = Diag.Registro.Activo;
+        _menu.Items.Add(_registro);
         _menu.Items.Add(new Forms.ToolStripSeparator());
         _menu.Items.Add(Item("Salir", () => Salir?.Invoke()));
     }
@@ -185,6 +188,8 @@ internal sealed class Bandeja : IDisposable
         PonerIcono(cfg.Bloqueado);
         _icono.Text = $"AMS2 Asistente de Frenado · {(cfg.Modo switch { ModoApp.Grabar => "grabando", ModoApp.GrabarSoloVos => "grabando solo vos", _ => "mostrando" })}";
     }
+
+    public void MarcarRegistro(bool activo) => _registro.Checked = activo;
 
     public void Globo(string titulo, string texto, bool error = false, int ms = 8000)
     {

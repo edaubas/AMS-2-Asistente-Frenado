@@ -36,7 +36,7 @@ internal sealed partial class VentanaMenu : Window
     private IntPtr _hwnd;
 
     public event Action? CerrarPulsado, AlternarFijar, AlternarAviso, AlternarPitido, ProbarAviso, ProbarPitido, AlternarVisible;
-    public event Action? AbrirCarpeta, AbrirCarpetaCapturas, ExportarDatos, ImportarDatos, AbrirDiagnostico, SalirConfirmado;
+    public event Action? AbrirCarpeta, AbrirCarpetaCapturas, ExportarDatos, ImportarDatos, AbrirDiagnostico, AlternarRegistro, SalirConfirmado;
     public event Action<PaginaMenu>? PaginaPedida;
     public event Action<ModoApp>? ModoElegido;
     public event Action<ReferenciaGuia>? ReferenciaElegida;
@@ -105,6 +105,8 @@ internal sealed partial class VentanaMenu : Window
         BtnAbrirCapturas.Click += (_, _) => AbrirCarpetaCapturas?.Invoke();
         BtnExportar.Click += (_, _) => ExportarDatos?.Invoke();
         BtnImportar.Click += (_, _) => ImportarDatos?.Invoke();
+        BtnRegistro.Click += (_, _) => AlternarRegistro?.Invoke();
+        MarcarRegistro(Diag.Registro.Activo);
         BtnDiagnostico.Click += (_, _) => AbrirDiagnostico?.Invoke();
         // "Salir" usa el mismo doble paso que la X de la barra
         BtnSalir.Click += (_, _) => { _salir.Pedir(Reloj()); ActualizarSalir(Reloj()); };
@@ -203,6 +205,10 @@ internal sealed partial class VentanaMenu : Window
     }
 
     // ---------------------------------------------------------------- estado
+
+    /// <summary>Texto del boton del registro de diagnostico (pagina Datos): muestra si esta activado.</summary>
+    public void MarcarRegistro(bool activo)
+        => BtnRegistro.Content = activo ? "✓  Registro de diagnóstico activado (clic para apagar)" : "Guardar registro de diagnóstico";
 
     /// <summary>Refleja la configuracion en los controles sin disparar eventos.</summary>
     public void Actualizar(ConfigApp cfg, string atajoActivo, bool overlayOculto)
