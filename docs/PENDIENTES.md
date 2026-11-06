@@ -84,3 +84,16 @@ Solo anotado: el usuario va a hacer pruebas y avisa antes de implementar.
 - En el menú de Ajustes, dentro de "Aviso de frenada", el control de anticipación va **debajo del título "Aviso de frenada" y arriba de "Símbolo"**.
 - La etiqueta pasa a ser solamente **"Anticipación de aviso"**, sin la aclaración entre paréntesis. La ayuda de abajo ("Segundos antes del punto de frenado en que suena el pitido y el símbolo llega al 100 %. 0 = justo en el punto.") se mantiene.
 - Mismo cambio de nombre en el submenú de la bandeja.
+
+### Cambio de diseño: textura de fondo de carbono forjado
+
+- **Pedido:** usar como fondo de la app una textura de este estilo: **carbono forjado** (fibra de carbono picada: astillas rectangulares de distintos tamaños, giradas al azar, en grises muy oscuros con vetas finas más claras). El usuario pasó una foto de referencia. Hoy el fondo usa una diagonal fina al 4 % (tipo carbono tejido).
+- **La foto no se sube al repo** (material de terceros). Solo sirve de referencia.
+- **Supuestos** (sin confirmar):
+  - "Fondo de la app" = los fondos de los paneles del overlay y del menú de Ajustes, no el escritorio ni la ventana del símbolo.
+  - Se genera una textura propia, no se usa la foto.
+- **A resolver al implementarlo:**
+  - Cómo generarla barata en WPF: una baldosa repetible hecha con vectores (astillas como rectángulos girados, con un patrón fijo generado por semilla) o una imagen pequeña propia embebida. Debe repetirse sin costuras visibles.
+  - Que no baje la legibilidad: el texto y los marcadores deben seguir cumpliendo contraste de 4,5:1 con el pico más claro de la textura (se revalida con `docs/ui/contraste_fase6.py`). Si hace falta, la textura va con menos contraste que la foto.
+  - Que no genere "moiré" ni consumo de CPU notable al redibujar a 60 Hz.
+  - Pasa por el Agente 2 (UI/UX) para actualizar la spec si cambia alguna medida o color.
