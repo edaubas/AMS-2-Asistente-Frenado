@@ -12,7 +12,8 @@ namespace AMS2Frenado.App;
 
 /// <summary>
 /// Overlay: ventana sin bordes, siempre arriba y semitransparente que solo dibuja lo que le dicen el
-/// <see cref="VistaOverlay"/> y el <see cref="CuadroUi"/> del Core (no tiene logica de estados).
+/// <see cref="VistaOverlay"/> y el <see cref="CuadroUi"/> del Core (no tiene logica de estados). Ya no hay mini mapa:
+/// quedan la tarjeta de guia y una cabecera chica con la pista, la clase, el modo y los avisos.
 /// Bloqueada, los clics la atraviesan (WS_EX_TRANSPARENT). Compila, SIN EJECUTAR: nunca se abrio en Windows.
 /// </summary>
 public partial class VentanaOverlay : Window
@@ -23,9 +24,6 @@ public partial class VentanaOverlay : Window
     private double _alfa = MedidasUi.AlfaPorDefecto;
 
     private string _firmaPanel = "";
-    private VistaMapa? _mapaPintado;
-    private Polygon? _auto;
-    private (double X, double Y, double A)? _autoPos;
     private double _anchoCifras;
 
     /// <summary>El usuario termino de mover la ventana (DragMove).</summary>
@@ -115,12 +113,11 @@ public partial class VentanaOverlay : Window
     {
         _alfa = cfg.Opacidad;
         double aPanel = MedidasUi.AlfaPanel(cfg.Opacidad, !_bloqueada);
-        double aMapa = MedidasUi.AlfaMapa(cfg.Opacidad, !_bloqueada);
         Tarjeta.Background = Pincel.De(Paleta.Fondo, aPanel);
-        TarjetaMapa.Background = Pincel.De(Paleta.Fondo, aMapa);
+        TarjetaCabecera.Background = Pincel.De(Paleta.Fondo, aPanel);
 
         PintarTarjeta(c);
-        PintarMapa(v, cfg, aMapa);
+        PintarCabecera(v);
     }
 
     private void PintarTarjeta(CuadroUi c)
@@ -147,18 +144,20 @@ public partial class VentanaOverlay : Window
             TxtFranjaCurva.Text = p.CurvaTxt ?? "";
             TxtFranjaCurva.Foreground = Pincel.De(Paleta.Titulo);
         }
-        Tarjeta.BorderThickness = new Thickness(p.ContornoRojo ? 3 : 0);
-
-        FilaEncabezado.Visibility = aproximando ? Visibility.Visible : Visibility.Collapsed;
+        // encabezado: curva + velocidades entrada -> vertice (en FRENA la curva ya esta en la franja)
+        bool hayVel = guia && p.VelocidadesTxt is not null;
+        FilaEncabezado.Visibility = aproximando || hayVel ? Visibility.Visible : Visibility.Collapsed;
+        TxtCurva.Visibility = p.TextoFranja is null ? Visibility.Visible : Visibility.Collapsed;
         TxtCurva.Text = p.CurvaTxt ?? "";
         TxtVelocidades.Text = p.VelocidadesTxt ?? "";
 
-        FilaNumero.Visibility = guia ? Visibility.Visible : Visibility.Collapsed;
-        if (guia)
+        PanelEtiquetas.Visibility = guia ? Visibility.Visible : Visibility.Collapsed;
+        if (guia) ReponerEtiquetas(PanelEtiquetas, p.EtiquetasPrincipal);
+        bool hayNumero = guia && p.NumeroPrincipal is not null;
+        FilaNumero.Visibility = hayNumero ? Visibility.Visible : Visibility.Collapsed;
+        if (hayNumero)
         {
-            ReponerEtiquetas(PanelEtiquetas, p.EtiquetasPrincipal);
             TxtNumero.Text = p.NumeroPrincipal ?? "";
-            TxtNumero.Foreground = Pincel.De(p.ColorNumero);
             TxtUnidad.Text = p.UnidadPrincipal ?? "";
             bool sec = p.NumeroSecundario is not null;
             Secundario.Visibility = sec ? Visibility.Visible : Visibility.Collapsed;
@@ -199,7 +198,6 @@ public partial class VentanaOverlay : Window
             ReponerEtiquetas(EtiquetaContVos, [EtiquetaRef.Vos]);
             TxtContIa.Text = k.Ia; TxtContIaDet.Text = k.IaDetalle;
             TxtContVos.Text = k.Vos; TxtContVosDet.Text = k.VosDetalle;
-            TxtContMapa.Text = k.Mapa; TxtContMapaDet.Text = k.MapaDetalle;
             TxtPieContadores.Text = k.Pie;
         }
     }
@@ -269,16 +267,12 @@ public partial class VentanaOverlay : Window
         }
     }
 
-    // ---------------------------------------------------------------- mini mapa
+    // ---------------------------------------------------------------- cabecera
 
-    private void PintarMapa(VistaOverlay v, ConfigApp cfg, double aMapa)
+    private void PintarCabecera(VistaOverlay v)
     {
-        TarjetaMapa.Visibility = cfg.MapaVisible ? Visibility.Visible : Visibility.Collapsed;
-        double esc = cfg.MapaCompacto ? MedidasUi.EscalaMapaCompacto : 1;
-        EscalaMapa.ScaleX = EscalaMapa.ScaleY = esc;
-        if (!cfg.MapaVisible) return;
-
-        TxtTituloMapa.Text = v.TituloMapa;
+        TxtTituloPista.Text = v.TituloPista;
+        TxtTituloPista.ToolTip = v.TituloPista;
         TxtChipClase.Text = v.ChipClase;
         ChipClase.Visibility = v.ChipClase.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         bool grab = v.Grabando;
@@ -288,79 +282,5 @@ public partial class VentanaOverlay : Window
         PuntoChipModo.Visibility = grab ? Visibility.Visible : Visibility.Collapsed;
         TxtAviso.Visibility = v.Aviso is null ? Visibility.Collapsed : Visibility.Visible;
         TxtAviso.Text = v.Aviso ?? "";
-
-        if (!ReferenceEquals(v.Mapa, _mapaPintado))
-        {
-            _mapaPintado = v.Mapa;
-            DibujarMapa(v.Mapa);
-        }
-
-        // posicion del auto: se mueve solo el triangulo
-        var pos = v.DistanciaM is double d ? v.Mapa.Posicion(d) : null;
-        if (_auto is not null)
-        {
-            _auto.Visibility = pos is null ? Visibility.Collapsed : Visibility.Visible;
-            if (pos is { } q && (_autoPos is null || Math.Abs(q.X - _autoPos.Value.X) + Math.Abs(q.Y - _autoPos.Value.Y) > 0.4
-                                 || Math.Abs(q.Angulo - _autoPos.Value.A) > 0.05))
-            {
-                _autoPos = (q.X, q.Y, q.Angulo);
-                Canvas.SetLeft(_auto, q.X); Canvas.SetTop(_auto, q.Y);
-                _auto.RenderTransform = new RotateTransform(q.Angulo * 180 / Math.PI);
-            }
-        }
-    }
-
-    private void DibujarMapa(VistaMapa mapa)
-    {
-        var cv = CanvasMapa;
-        cv.Children.Clear();
-        _auto = null; _autoPos = null;
-        LeyendaMapa.Children.Clear();
-        if (mapa.EstaVacio)
-        {
-            cv.Children.Add(new TextBlock
-            {
-                Text = "Sin mapa todavía: dá unas vueltas en modo Grabar.", Foreground = Pincel.De(Paleta.Apoyo),
-                FontFamily = (FontFamily)FindResource("Inter"), FontSize = 12, TextWrapping = TextWrapping.Wrap, Width = 260,
-                Margin = new Thickness(18, 80, 0, 0),
-            });
-            return;
-        }
-        var pts = new PointCollection(mapa.Trazo.Select(t => new Point(t.X, t.Y)));
-        pts.Add(pts[0]);      // circuito cerrado
-        cv.Children.Add(new Polyline { Points = pts, Stroke = Pincel.De(Paleta.MapaBorde), StrokeThickness = 7, StrokeLineJoin = PenLineJoin.Round });
-        cv.Children.Add(new Polyline { Points = pts, Stroke = Pincel.De(Paleta.MapaTrazo), StrokeThickness = 3.5, StrokeLineJoin = PenLineJoin.Round });
-
-        foreach (var m in mapa.Marcadores)
-        {
-            // halo oscuro de 4,5 detras: el marcador se ve sobre el asfalto aunque coincidan IA y vos
-            var halo = Forma(m.Forma, Paleta.MapaHalo, 11 + 4.5);
-            Canvas.SetLeft(halo, m.X - (11 + 4.5) / 2); Canvas.SetTop(halo, m.Y - (11 + 4.5) / 2);
-            cv.Children.Add(halo);
-            var marca = Forma(m.Forma, m.Color, 11, hueco: m.Hueco);
-            Canvas.SetLeft(marca, m.X - 5.5); Canvas.SetTop(marca, m.Y - 5.5);
-            cv.Children.Add(marca);
-        }
-
-        _auto = new Polygon
-        {
-            Points = [new Point(7, 0), new Point(-5, -5.5), new Point(-5, 5.5)],
-            Fill = Pincel.De(Paleta.Blanco), Stroke = Pincel.De(Paleta.MapaHalo), StrokeThickness = 1.5,
-        };
-        cv.Children.Add(_auto);
-
-        // leyenda: formas llenas = frenada, vacias = toque / levanta
-        void Item(UIElement forma, string texto, string color)
-        {
-            var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 12, 0) };
-            ((FrameworkElement)forma).VerticalAlignment = VerticalAlignment.Center;
-            ((FrameworkElement)forma).Margin = new Thickness(0, 0, 4, 0);
-            sp.Children.Add(forma);
-            sp.Children.Add(new TextBlock { Text = texto, Foreground = Pincel.De(color), FontFamily = (FontFamily)FindResource("Inter"), FontSize = 12 });
-            LeyendaMapa.Children.Add(sp);
-        }
-        Item(Forma(FormaMarcador.Rombo, Paleta.NaranjaIa, 9), mapa.LeyendaIa, Paleta.Apoyo);
-        Item(Forma(FormaMarcador.Circulo, Paleta.AzulVos, 9), mapa.LeyendaVos, Paleta.Apoyo);
-        Item(Forma(FormaMarcador.Circulo, Paleta.Apoyo, 9, hueco: true), "vacío = toque/levantá", Paleta.Apoyo);
     }
 }

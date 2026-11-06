@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AMS2Frenado.Core;
+using AMS2Frenado.Core.Datos;
 using AMS2Frenado.Core.Grabacion;
 using AMS2Frenado.Core.Overlay;
 using Forms = System.Windows.Forms;
@@ -26,11 +27,13 @@ internal sealed class ControladorApp : IDisposable
     private readonly Stopwatch _reloj = Stopwatch.StartNew();
     private readonly DispatcherTimer _timer = new(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(16) };
     private readonly VentanaOverlay _ventana = new();
+    private readonly VentanaAviso _aviso = new();
+    private readonly Pitido _pitido = new();
     private readonly Bandeja _bandeja = new();
     private readonly AtajoGlobal _atajo = new();
     private VentanaDiagnostico? _diagnostico;
 
-    private bool _anclada = true;          // sin posicion propia: se ancla a la esquina elegida
+    private bool _anclada = true;          // sin posicion propia: se ancla a la esquina por defecto (arriba a la derecha)
     private string? _ultimoAviso;
     private double _ultimaReafirmacion;
     private bool _liberado;
@@ -43,6 +46,10 @@ internal sealed class ControladorApp : IDisposable
 
         _ventana.AplicarEscala(_cfg.Escala);
         _ventana.AplicarBloqueo(_cfg.Bloqueado, _cfg.AtajoEfectivo);
+        _aviso.AplicarEscala(_cfg.AvisoEscala);
+        _aviso.AplicarBloqueo(_cfg.Bloqueado);
+        _aviso.Movida += AlMoverAviso;
+        _aviso.EscalaCambiada += e => { _cfg.AvisoEscala = e; Guardar(); _bandeja.Actualizar(_cfg, _atajo.Actual); };
         _ventana.SizeChanged += (_, _) => { if (_anclada) Anclar(); };
         _ventana.Movida += AlMoverVentana;
         _ventana.EscalaCambiada += e => { _cfg.Escala = e; Guardar(); _bandeja.Actualizar(_cfg, _atajo.Actual); if (_anclada) Anclar(); };
@@ -55,8 +62,11 @@ internal sealed class ControladorApp : IDisposable
     public void Iniciar()
     {
         PosicionInicial();
+        PosicionInicialAviso();
         _ventana.Show();                      // se muestra siempre una vez (para tener hwnd y estilos); se oculta abajo si hace falta
         if (!_cfg.Visible) _ventana.Hide();
+        // la ventana del aviso queda abierta y transparente (opacidad 0): asi no hay parpadeo al aparecer, solo el fundido
+        _aviso.Show();
 
         bool atajoOk = _atajo.Registrar(_cfg.AtajoEfectivo);
         _bandeja.Actualizar(_cfg, _atajo.Actual);
@@ -89,7 +99,7 @@ internal sealed class ControladorApp : IDisposable
             catch (Exception) { r = ResultadoLectura.SinJuego; }
 
             var v = _servicio.Paso(r, t);
-            if (v.Pitar) Pitar();
+            if (v.Pitar) _pitido.Reproducir();
             if (v.Aviso is not null && v.Aviso != _ultimoAviso)
                 _bandeja.Globo("Aviso", v.Aviso, error: true);
             _ultimoAviso = v.Aviso;
@@ -98,8 +108,10 @@ internal sealed class ControladorApp : IDisposable
             {
                 var cuadro = _suavizador.Actualizar(v.Panel, t);
                 _ventana.Pintar(v, cuadro, _cfg);
-                if (t - _ultimaReafirmacion > 2) { _ultimaReafirmacion = t; _ventana.ReafirmarArriba(); }
+                if (t - _ultimaReafirmacion > 2) { _ultimaReafirmacion = t; _ventana.ReafirmarArriba(); _aviso.ReafirmarArriba(); }
             }
+            // el aviso se actualiza en cada tick (60 Hz) aunque la telemetria llegue a ~27 Hz, para que el fundido de 80 ms sea fluido
+            _aviso.Pintar(_servicio.ActualizarAviso(t).Opacidad);
         }
         catch (Exception e)
         {
@@ -108,19 +120,16 @@ internal sealed class ControladorApp : IDisposable
         }
     }
 
-    private static void Pitar()
-    {
-        Task.Run(() => { try { Console.Beep(880, 120); } catch (Exception) { } });
-    }
-
     // ---------------------------------------------------------------- config
 
     private void AplicarAlServicio()
     {
         _servicio.Modo = _cfg.Modo;
         _servicio.ReferenciaPrincipal = _cfg.ReferenciaPrincipal;
-        _servicio.RojoSuave = _cfg.RojoSuave;
         _servicio.Pitido = _cfg.Pitido;
+        // "Ocultar overlay" tambien apaga el aviso de frenada
+        _servicio.AvisoActivo = _cfg.AvisoActivo && _cfg.Visible;
+        _servicio.AvisoDuracionS = _cfg.AvisoDuracionS;
     }
 
     private void Guardar()
@@ -138,7 +147,7 @@ internal sealed class ControladorApp : IDisposable
         cambio();
         _cfg.Normalizar();
         AplicarAlServicio();
-        if (aplicarBloqueo) _ventana.AplicarBloqueo(_cfg.Bloqueado, _cfg.AtajoEfectivo);
+        if (aplicarBloqueo) { _ventana.AplicarBloqueo(_cfg.Bloqueado, _cfg.AtajoEfectivo); _aviso.AplicarBloqueo(_cfg.Bloqueado); }
         if (_cfg.Visible && !_ventana.IsVisible) _ventana.Show();
         if (!_cfg.Visible && _ventana.IsVisible) _ventana.Hide();
         _bandeja.Actualizar(_cfg, _atajo.Actual);
@@ -150,9 +159,11 @@ internal sealed class ControladorApp : IDisposable
         _bandeja.AlternarBloqueo += () => Alternar(() => _cfg.Bloqueado = !_cfg.Bloqueado, aplicarBloqueo: true);
         _bandeja.AlternarVisible += () => Alternar(() => _cfg.Visible = !_cfg.Visible);
         _bandeja.AlternarPitido += () => Alternar(() => _cfg.Pitido = !_cfg.Pitido);
-        _bandeja.AlternarRojoSuave += () => Alternar(() => _cfg.RojoSuave = !_cfg.RojoSuave);
-        _bandeja.AlternarMapa += () => Alternar(() => _cfg.MapaVisible = !_cfg.MapaVisible);
-        _bandeja.AlternarMapaCompacto += () => Alternar(() => _cfg.MapaCompacto = !_cfg.MapaCompacto);
+        _bandeja.AlternarAviso += () => Alternar(() => _cfg.AvisoActivo = !_cfg.AvisoActivo);
+        _bandeja.ProbarAviso += () => _servicio.ProbarAviso(_reloj.Elapsed.TotalSeconds);
+        _bandeja.ProbarPitido += _pitido.Reproducir;
+        _bandeja.EscalaAvisoElegida += s => { Alternar(() => _cfg.AvisoEscala = s); _aviso.AplicarEscala(_cfg.AvisoEscala); };
+        _bandeja.DuracionAvisoElegida += d => Alternar(() => _cfg.AvisoDuracionS = d);
         _bandeja.ModoElegido += m => Alternar(() => _cfg.Modo = m);
         _bandeja.ReferenciaElegida += r => Alternar(() => _cfg.ReferenciaPrincipal = r);
         _bandeja.OpacidadElegida += a => Alternar(() => _cfg.Opacidad = a);
@@ -161,12 +172,6 @@ internal sealed class ControladorApp : IDisposable
             Alternar(() => _cfg.Escala = s);
             _ventana.AplicarEscala(_cfg.Escala);
             if (_anclada) Anclar();
-        };
-        _bandeja.EsquinaElegida += e =>
-        {
-            Alternar(() => { _cfg.Esquina = e; _cfg.Posiciones.Remove(MonitorActual().clave); });
-            _anclada = true;
-            Anclar();
         };
         _bandeja.AtajoElegido += texto =>
         {
@@ -183,6 +188,9 @@ internal sealed class ControladorApp : IDisposable
             }
         };
         _bandeja.AbrirCarpeta += () => _bandeja.AbrirEnExplorador(_almacen.RutaBase);
+        _bandeja.AbrirCarpetaCapturas += () => _bandeja.AbrirEnExplorador(CarpetaCapturas);
+        _bandeja.ExportarDatos += ExportarDatos;
+        _bandeja.ImportarDatos += ImportarDatos;
         _bandeja.AbrirDiagnostico += AbrirDiagnostico;
         _bandeja.Salir += Salir;
     }
@@ -198,14 +206,16 @@ internal sealed class ControladorApp : IDisposable
     // ---------------------------------------------------------------- posicion
 
     /// <summary>Monitor bajo el centro de la ventana (o el principal) con su area de trabajo en DIP.</summary>
-    private (string clave, AreaPantalla area) MonitorActual()
+    private (string clave, AreaPantalla area) MonitorActual() => MonitorDe(_ventana);
+
+    private static (string clave, AreaPantalla area) MonitorDe(Window w)
     {
         double sx = 1, sy = 1;
-        try { var d = VisualTreeHelper.GetDpi(_ventana); sx = d.DpiScaleX; sy = d.DpiScaleY; } catch { }
+        try { var d = VisualTreeHelper.GetDpi(w); sx = d.DpiScaleX; sy = d.DpiScaleY; } catch { }
         var scr = Forms.Screen.PrimaryScreen ?? Forms.Screen.AllScreens[0];
-        if (_ventana.IsVisible)
+        if (w.IsVisible)
         {
-            var centro = new System.Drawing.Point((int)((_ventana.Left + _ventana.ActualWidth / 2) * sx), (int)((_ventana.Top + _ventana.ActualHeight / 2) * sy));
+            var centro = new System.Drawing.Point((int)((w.Left + w.ActualWidth / 2) * sx), (int)((w.Top + w.ActualHeight / 2) * sy));
             scr = Forms.Screen.FromPoint(centro);
         }
         var wa = scr.WorkingArea;
@@ -230,6 +240,32 @@ internal sealed class ControladorApp : IDisposable
         }
     }
 
+    /// <summary>Aviso: posicion guardada por monitor o, la primera vez, centrado en horizontal y en el tercio superior.</summary>
+    private void PosicionInicialAviso()
+    {
+        var (clave, area) = MonitorDe(_aviso);
+        double lado = MedidasAviso.LadoDeEscala(_cfg.AvisoEscala);
+        _aviso.WindowStartupLocation = WindowStartupLocation.Manual;
+        if (_cfg.AvisoPosiciones.TryGetValue(clave, out var p))
+        {
+            var (x, y) = Esquinas.AjustarDentro((p.X, p.Y), area, lado, lado);
+            _aviso.Left = x; _aviso.Top = y;
+        }
+        else
+        {
+            _aviso.Left = area.X + (area.Ancho - lado) / 2;
+            _aviso.Top = area.Y + area.Alto * 0.30;
+        }
+    }
+
+    private void AlMoverAviso()
+    {
+        var (clave, area) = MonitorDe(_aviso);
+        var (x, y) = Esquinas.AjustarDentro((_aviso.Left, _aviso.Top), area, _aviso.ActualWidth, _aviso.ActualHeight);
+        _cfg.AvisoPosiciones[clave] = new PosicionVentana { X = x, Y = y };
+        Guardar();
+    }
+
     private void Anclar()
     {
         var (_, area) = MonitorActual();
@@ -245,6 +281,107 @@ internal sealed class ControladorApp : IDisposable
         var (clave, area) = MonitorActual();
         var (x, y) = Esquinas.AjustarDentro((_ventana.Left, _ventana.Top), area, _ventana.ActualWidth, _ventana.ActualHeight);
         _cfg.Posiciones[clave] = new PosicionVentana { X = x, Y = y };
+        Guardar();
+    }
+
+    // ---------------------------------------------------------------- respaldo de datos (compila, sin ejecutar)
+
+    private static string CarpetaCapturas => System.IO.Path.Combine(Almacen.RutaPorDefecto(), RespaldoDatos.CarpetaCapturas);
+
+    /// <summary>Ventana invisible y siempre arriba para que los cuadros de dialogo no queden detras de AMS2 en Borderless.</summary>
+    private static T EnPrimerPlano<T>(Func<Window, T> f)
+    {
+        var dueno = new Window
+        {
+            Width = 0, Height = 0, WindowStyle = WindowStyle.None, ShowInTaskbar = false, Topmost = true,
+            AllowsTransparency = true, Background = Brushes.Transparent, WindowStartupLocation = WindowStartupLocation.CenterScreen,
+        };
+        dueno.Show();
+        try { return f(dueno); }
+        finally { dueno.Close(); }
+    }
+
+    private void ExportarDatos()
+    {
+        try
+        {
+            _servicio.GuardarGrabacion();        // lo grabado hasta ahora entra en el respaldo
+            Guardar();
+            string? destino = EnPrimerPlano(w =>
+            {
+                var dlg = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Exportar datos de AMS2 Asistente de Frenado",
+                    Filter = "Respaldo de datos (*.zip)|*.zip", DefaultExt = ".zip", AddExtension = true, OverwritePrompt = true,
+                    FileName = $"AMS2-datos-{DateTime.Now:yyyyMMdd}.zip",
+                };
+                return dlg.ShowDialog(w) == true ? dlg.FileName : null;
+            });
+            if (destino is null) return;
+            int n = RespaldoDatos.Exportar(_almacen.RutaBase, destino);
+            _bandeja.Globo("Datos exportados", $"{n} archivos (sin capturas) en {destino}");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            _bandeja.Globo("No se pudo exportar", e.Message, error: true);
+        }
+    }
+
+    private void ImportarDatos()
+    {
+        if (_cfg.Modo == ModoApp.Grabar)
+        {
+            _bandeja.Globo("Importar datos", "Pasá primero a Modo › Mostrar: en modo Grabar el programa podría pisar lo importado.", error: true);
+            return;
+        }
+        try
+        {
+            string? origen = EnPrimerPlano(w =>
+            {
+                var dlg = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "Importar datos de AMS2 Asistente de Frenado",
+                    Filter = "Respaldo de datos (*.zip)|*.zip", CheckFileExists = true,
+                };
+                if (dlg.ShowDialog(w) != true) return null;
+                var ok = MessageBox.Show(w,
+                    "Se van a reemplazar los archivos de datos que traiga el .zip. De cada archivo que ya existe queda una copia .bak " +
+                    "al lado. Las capturas no se tocan.\n\n¿Importar?",
+                    "Importar datos", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                return ok == MessageBoxResult.Yes ? dlg.FileName : null;
+            });
+            if (origen is null) return;
+
+            _servicio.GuardarGrabacion();
+            var r = RespaldoDatos.Importar(origen, _almacen.RutaBase);
+            _servicio.ForzarRecarga();
+            if (r.ConfigImportada) RecargarConfigImportada();
+            string extra = r.Omitidos.Count > 0 ? $" ({r.Omitidos.Count} omitidos)" : "";
+            _bandeja.Globo("Datos importados", $"{r.Importados} archivos importados, {r.Respaldados} respaldados como .bak{extra}.");
+        }
+        catch (RespaldoInvalidoException e)
+        {
+            _bandeja.Globo("No se importó nada", e.Message, error: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            _bandeja.Globo("No se pudo importar", e.Message, error: true);
+        }
+    }
+
+    /// <summary>Despues de importar un config.json: se lo lleva a la configuracion en uso para que no se pise al guardar.</summary>
+    private void RecargarConfigImportada()
+    {
+        _cfg.CopiarDe(new AlmacenConfig().Cargar());
+        AplicarAlServicio();
+        _ventana.AplicarEscala(_cfg.Escala);
+        _aviso.AplicarEscala(_cfg.AvisoEscala);
+        _ventana.AplicarBloqueo(_cfg.Bloqueado, _cfg.AtajoEfectivo);
+        _aviso.AplicarBloqueo(_cfg.Bloqueado);
+        if (!string.Equals(_atajo.Actual?.Texto, _cfg.AtajoEfectivo.Texto, StringComparison.OrdinalIgnoreCase)) _atajo.Registrar(_cfg.AtajoEfectivo);
+        if (_cfg.Visible && !_ventana.IsVisible) _ventana.Show();
+        if (!_cfg.Visible && _ventana.IsVisible) _ventana.Hide();
+        _bandeja.Actualizar(_cfg, _atajo.Actual);
         Guardar();
     }
 
@@ -266,6 +403,7 @@ internal sealed class ControladorApp : IDisposable
         _atajo.Dispose();
         _bandeja.Dispose();
         _diagnostico?.Close();
+        _aviso.Close();
         _ventana.Close();
         _lector.Dispose();
     }

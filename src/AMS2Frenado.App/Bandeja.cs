@@ -20,22 +20,22 @@ internal sealed class Bandeja : IDisposable
     private readonly Forms.ContextMenuStrip _menu = new();
     private Dibujo.Icon? _iconoActual;
 
-    private Forms.ToolStripMenuItem _bloquear = null!, _mostrar = null!, _pitido = null!, _rojoSuave = null!, _mapaVisible = null!, _mapaCompacto = null!;
+    private Forms.ToolStripMenuItem _bloquear = null!, _mostrar = null!, _pitido = null!, _aviso = null!;
     private readonly Dictionary<ModoApp, Forms.ToolStripMenuItem> _modos = [];
     private readonly Dictionary<ReferenciaGuia, Forms.ToolStripMenuItem> _refs = [];
-    private readonly Dictionary<Esquina, Forms.ToolStripMenuItem> _esquinas = [];
+    private readonly Dictionary<double, Forms.ToolStripMenuItem> _escalasAviso = [];
+    private readonly Dictionary<double, Forms.ToolStripMenuItem> _duracionesAviso = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _escalas = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _opacidades = [];
     private readonly Dictionary<string, Forms.ToolStripMenuItem> _atajos = [];
 
     public static readonly string[] AtajosSugeridos = ["Ctrl+Alt+L", "Ctrl+Alt+O", "Ctrl+Shift+F9", "Ctrl+Alt+F10"];
 
-    public event Action? AlternarBloqueo, AlternarVisible, AlternarPitido, AlternarRojoSuave, AlternarMapa, AlternarMapaCompacto;
-    public event Action? AbrirCarpeta, AbrirDiagnostico, Salir;
+    public event Action? AlternarBloqueo, AlternarVisible, AlternarPitido, AlternarAviso, ProbarAviso, ProbarPitido;
+    public event Action? AbrirCarpeta, AbrirCarpetaCapturas, ExportarDatos, ImportarDatos, AbrirDiagnostico, Salir;
     public event Action<ModoApp>? ModoElegido;
     public event Action<ReferenciaGuia>? ReferenciaElegida;
-    public event Action<Esquina>? EsquinaElegida;
-    public event Action<double>? EscalaElegida;
+    public event Action<double>? EscalaElegida, EscalaAvisoElegida, DuracionAvisoElegida;
     public event Action<double>? OpacidadElegida;
     public event Action<string>? AtajoElegido;
 
@@ -74,15 +74,7 @@ internal sealed class Bandeja : IDisposable
         }
         _menu.Items.Add(refp);
 
-        var pos = new Forms.ToolStripMenuItem("Posición");
-        foreach (var e in new[] { Esquina.ArribaDerecha, Esquina.ArribaIzquierda, Esquina.AbajoDerecha, Esquina.AbajoIzquierda })
-        {
-            var it = Item(Esquinas.Nombre(e), () => EsquinaElegida?.Invoke(e));
-            _esquinas[e] = it; pos.DropDownItems.Add(it);
-        }
-        _menu.Items.Add(pos);
-
-        var tam = new Forms.ToolStripMenuItem("Tamaño");
+        var tam = new Forms.ToolStripMenuItem("Tamaño del overlay");
         foreach (var s in new[] { 0.75, 1.0, 1.25, 1.5 })
         {
             var it = Item($"{s * 100:0} %", () => EscalaElegida?.Invoke(s));
@@ -98,11 +90,31 @@ internal sealed class Bandeja : IDisposable
         }
         _menu.Items.Add(opa);
 
-        _mapaVisible = Item("Mostrar mapa", () => AlternarMapa?.Invoke());
-        _mapaCompacto = Item("Mapa compacto", () => AlternarMapaCompacto?.Invoke());
-        _rojoSuave = Item("Rojo suave en FRENÁ", () => AlternarRojoSuave?.Invoke());
+        _menu.Items.Add(new Forms.ToolStripSeparator());
+
+        // aviso de frenada: simbolo de freno en una ventana aparte
+        _aviso = Item("Aviso de frenada (símbolo)", () => AlternarAviso?.Invoke());
+        _menu.Items.Add(_aviso);
+        _menu.Items.Add(Item("Probar aviso", () => ProbarAviso?.Invoke()));
+        var tamAviso = new Forms.ToolStripMenuItem("Tamaño del aviso");
+        foreach (var s in new[] { 0.5, 0.75, 1.0, 1.5, 2.0, 3.0 })
+        {
+            var it = Item($"{s * 100:0} %", () => EscalaAvisoElegida?.Invoke(s));
+            _escalasAviso[s] = it; tamAviso.DropDownItems.Add(it);
+        }
+        _menu.Items.Add(tamAviso);
+        var durAviso = new Forms.ToolStripMenuItem("Duración máxima del aviso");
+        foreach (var d in new[] { 1.0, 1.5, 2.0 })
+        {
+            var it = Item($"{d:0.0} s", () => DuracionAvisoElegida?.Invoke(d));
+            _duracionesAviso[d] = it; durAviso.DropDownItems.Add(it);
+        }
+        _menu.Items.Add(durAviso);
+
         _pitido = Item("Pitido al frenar", () => AlternarPitido?.Invoke());
-        _menu.Items.AddRange([_mapaVisible, _mapaCompacto, _rojoSuave, _pitido]);
+        _menu.Items.Add(_pitido);
+        _menu.Items.Add(Item("Probar pitido", () => ProbarPitido?.Invoke()));
+        _menu.Items.Add(new Forms.ToolStripSeparator());
 
         var atajo = new Forms.ToolStripMenuItem("Atajo de bloqueo");
         foreach (var a in AtajosSugeridos)
@@ -117,7 +129,13 @@ internal sealed class Bandeja : IDisposable
         _menu.Items.Add(new Forms.ToolStripSeparator());
         _mostrar = Item("Ocultar overlay", () => AlternarVisible?.Invoke());
         _menu.Items.Add(_mostrar);
-        _menu.Items.Add(Item("Abrir carpeta de datos", () => AbrirCarpeta?.Invoke()));
+        var datos = new Forms.ToolStripMenuItem("Datos");
+        datos.DropDownItems.Add(Item("Abrir carpeta de datos", () => AbrirCarpeta?.Invoke()));
+        datos.DropDownItems.Add(Item("Abrir carpeta de capturas", () => AbrirCarpetaCapturas?.Invoke()));
+        datos.DropDownItems.Add(new Forms.ToolStripSeparator());
+        datos.DropDownItems.Add(Item("Exportar datos…", () => ExportarDatos?.Invoke()));
+        datos.DropDownItems.Add(Item("Importar datos…", () => ImportarDatos?.Invoke()));
+        _menu.Items.Add(datos);
         _menu.Items.Add(Item("Diagnóstico…", () => AbrirDiagnostico?.Invoke()));
         _menu.Items.Add(new Forms.ToolStripSeparator());
         _menu.Items.Add(Item("Salir", () => Salir?.Invoke()));
@@ -131,13 +149,12 @@ internal sealed class Bandeja : IDisposable
         _mostrar.Text = cfg.Visible ? "Ocultar overlay" : "Mostrar overlay";
         foreach (var (m, it) in _modos) it.Checked = cfg.Modo == m;
         foreach (var (r, it) in _refs) it.Checked = cfg.ReferenciaPrincipal == r;
-        foreach (var (e, it) in _esquinas) it.Checked = cfg.Esquina == e;
+        foreach (var (e, it) in _escalasAviso) it.Checked = Math.Abs(cfg.AvisoEscala - e) < 0.01;
+        foreach (var (d, it) in _duracionesAviso) it.Checked = Math.Abs(cfg.AvisoDuracionS - d) < 0.01;
         foreach (var (s, it) in _escalas) it.Checked = Math.Abs(cfg.Escala - s) < 0.01;
         foreach (var (a, it) in _opacidades) it.Checked = Math.Abs(cfg.Opacidad - a) < 0.005;
         foreach (var (t, it) in _atajos) it.Checked = string.Equals(cfg.Atajo, t, StringComparison.OrdinalIgnoreCase);
-        _mapaVisible.Checked = cfg.MapaVisible;
-        _mapaCompacto.Checked = cfg.MapaCompacto;
-        _rojoSuave.Checked = cfg.RojoSuave;
+        _aviso.Checked = cfg.AvisoActivo;
         _pitido.Checked = cfg.Pitido;
         PonerIcono(cfg.Bloqueado);
         _icono.Text = $"AMS2 Asistente de Frenado · {(cfg.Modo == ModoApp.Grabar ? "grabando" : "mostrando")}";

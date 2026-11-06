@@ -24,7 +24,7 @@
             </Border>
 
             <!-- tarjeta de guia / lejos / sin datos / grabando -->
-            <Border x:Name="Tarjeta" CornerRadius="10" Margin="0,0,0,8" Visibility="Collapsed" BorderBrush="#C62F26" BorderThickness="0">
+            <Border x:Name="Tarjeta" CornerRadius="10" Margin="0,0,0,8" Visibility="Collapsed">
                 <StackPanel>
                     <Border x:Name="Franja" Height="40" CornerRadius="9,9,0,0" Visibility="Collapsed">
                         <Grid Margin="14,0">
@@ -38,14 +38,15 @@
                             <TextBlock x:Name="TxtCurva" FontFamily="{StaticResource Barlow}" FontWeight="Bold" FontSize="22" Foreground="#EEF1F4"/>
                             <TextBlock x:Name="TxtVelocidades" HorizontalAlignment="Right" VerticalAlignment="Center" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
                         </Grid>
-                        <!-- cartel / velocidad -->
+                        <!-- leyenda de referencias: rombo IA / circulo VOS (siempre, tambien en la frenada) -->
+                        <StackPanel x:Name="PanelEtiquetas" Orientation="Horizontal" Height="16" Margin="0,0,0,2"/>
+                        <!-- velocidad minima de TOQUE / LEVANTA (la frenada ya no lleva cartel grande) -->
                         <Grid x:Name="FilaNumero">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
-                                <StackPanel x:Name="PanelEtiquetas" Orientation="Horizontal" Height="16"/>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock x:Name="TxtNumero" FontFamily="{StaticResource Barlow}" FontWeight="Bold" FontSize="64" Foreground="#FFFFFF" TextAlignment="Left" LineStackingStrategy="BlockLineHeight" LineHeight="61"/>
                                     <TextBlock x:Name="TxtUnidad" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="30" Foreground="#A9B2BC" VerticalAlignment="Bottom" Margin="6,0,0,8"/>
@@ -59,7 +60,7 @@
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
-                        <!-- regla de 18 px con los marcadores de IA y vos -->
+                        <!-- barra de progreso (regla de 18 px) con los marcadores de IA y vos -->
                         <Canvas x:Name="CanvasRegla" Height="32" Margin="0,8,0,0"/>
                         <TextBlock x:Name="TxtMetros" Margin="0,2,0,0" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="14" Foreground="#DDE2E7"/>
 
@@ -84,7 +85,7 @@
                             <TextBlock x:Name="TxtEncabContadores" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
                             <Grid Margin="0,8,0,0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
                                     <StackPanel x:Name="EtiquetaContIa" Orientation="Horizontal"/>
@@ -96,11 +97,6 @@
                                     <TextBlock x:Name="TxtContVos" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="26" Foreground="#EEF1F4"/>
                                     <TextBlock x:Name="TxtContVosDet" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="MAPA" FontFamily="{StaticResource Inter}" FontWeight="Bold" FontSize="12" Foreground="#A9B2BC"/>
-                                    <TextBlock x:Name="TxtContMapa" FontFamily="{StaticResource Barlow}" FontWeight="SemiBold" FontSize="26" Foreground="#EEF1F4"/>
-                                    <TextBlock x:Name="TxtContMapaDet" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
-                                </StackPanel>
                             </Grid>
                             <TextBlock x:Name="TxtPieContadores" Margin="0,10,0,0" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC"/>
                         </StackPanel>
@@ -108,15 +104,17 @@
                 </StackPanel>
             </Border>
 
-            <!-- mini mapa -->
-            <Border x:Name="TarjetaMapa" CornerRadius="10" Padding="12" Visibility="Collapsed">
-                <Border.LayoutTransform>
-                    <ScaleTransform x:Name="EscalaMapa" ScaleX="1" ScaleY="1"/>
-                </Border.LayoutTransform>
-                <StackPanel Width="296">
-                    <Grid Margin="0,0,0,6">
-                        <TextBlock x:Name="TxtTituloMapa" VerticalAlignment="Center" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC" TextTrimming="CharacterEllipsis" Margin="0,0,130,0"/>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <!-- cabecera: pista, chip de la clase, chip de modo y avisos (el mini mapa ya no existe) -->
+            <Border x:Name="TarjetaCabecera" CornerRadius="10" Padding="12,8">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="TxtTituloPista" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0"
+                                   FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#A9B2BC" TextTrimming="CharacterEllipsis"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Border x:Name="ChipClase" Background="#2A3139" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
                                 <TextBlock x:Name="TxtChipClase" FontFamily="{StaticResource Inter}" FontSize="11" FontWeight="SemiBold" Foreground="#EEF1F4"/>
                             </Border>
@@ -128,8 +126,6 @@
                             </Border>
                         </StackPanel>
                     </Grid>
-                    <Canvas x:Name="CanvasMapa" Width="296" Height="190" ClipToBounds="True"/>
-                    <WrapPanel x:Name="LeyendaMapa" Margin="0,6,0,0"/>
                     <TextBlock x:Name="TxtAviso" Margin="0,6,0,0" Visibility="Collapsed" TextWrapping="Wrap" FontFamily="{StaticResource Inter}" FontSize="12" Foreground="#FF9C94"/>
                 </StackPanel>
             </Border>
