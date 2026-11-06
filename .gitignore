@@ -1,0 +1,17 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+*.suo
+TestResults/
+publish/
+
+# Python (prototipo)
+__pycache__/
+*.pyc
+
+# Datos locales y header del juego (no redistribuir)
+puntos_frenado.json
+*.bak
+SharedMemory.h
