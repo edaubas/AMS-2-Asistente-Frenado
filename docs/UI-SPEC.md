@@ -31,6 +31,18 @@ Agente 2, primera participación (sobre el lienzo). Rama `fase-5-ui-spec`. Solo 
 > | 6 | Pitido con WAV generado en memoria y `SoundPlayer` (antes `Console.Beep`). "Probar pitido" en el menú. | 3.4 |
 > | 7 | Exportar / importar datos (.zip) y abrir la carpeta de capturas. | 3.4, [DATOS.md](DATOS.md) |
 > | 8 | Pendientes (no implementados): botón de modo en el HUD, "✕" / menú contextual sobre el overlay desbloqueado y nombre de pista largo. | 4 (P16 a P18) |
+>
+> ## Fase 5c: ajustes tras la segunda prueba con AMS2 (vigente)
+>
+> El usuario probó el .exe de la 5b (run #9). **Donde el resto del documento (o la lista de la 5b) diga otra cosa sobre el aviso de frenada, el pitido, SIN DATOS o los modos de grabación, manda esta lista.** Todo lo de ventana y sonido sigue marcado "compila, sin ejecutar".
+>
+> | # | Cambio | Dónde queda |
+> |---|---|---|
+> | 1 | **SIN DATOS dice la causa real**: boxes, largo de pista distinto, sin curvas guardadas, archivo ilegible o datos sin curvas válidas. Antes "No hay curvas guardadas" salía también al estar solo en boxes. | 2 (SIN DATOS) |
+> | 2 | **El pitido no suena si ya estás frenando** (misma regla que el símbolo). Un único decisor (`DecisorAviso`, Core) alimenta al pitido y al símbolo. | 2.1 |
+> | 3 | **El símbolo aparece gradualmente**: la opacidad (y una escala leve) sube de 0 a 1 en los últimos 2 s (1 a 3 s) hasta el punto de frenado y llega al 100 % justo ahí. | 2.1 |
+> | 4 | **Pitido y símbolo siguen solo a la referencia principal elegida.** Si la curva no tiene bloque de esa referencia, no hay ni pitido ni símbolo en esa curva. | 2.1 |
+> | 5 | **Tercer modo "Grabar solo vos"**: la IA no se vuelve a grabar; chip "GRABANDO · SOLO VOS". | 2 (GRABANDO), 3.4 |
 
 ---
 
@@ -170,7 +182,20 @@ Vista: `docs/ui/pantallas.png`.
 | **LEVANTÁ** | Igual que TOQUE con "LEVANTÁ" y **sin metros**. |
 | **Cabecera** *(fase 5b, reemplaza al mini mapa)* | Tarjeta chica con la pista y variante (Inter 12, `#A9B2BC`, se recorta con "…" **sin pisar los chips**), el chip de la clase y el chip de modo (MOSTRAR / GRABANDO). Debajo, los avisos fuera de banda ("No se pudo guardar…"). Fondo con el mismo alfa que el panel. ~~Mini mapa: marcadores llenos y anillos vacíos.~~ |
 | **GRABANDO** (flag) | Chip "● GRABANDO" (`#4A1F1C` / `#FF9C94`, punto `#FF5A4E`) en la cabecera, en lugar del chip MOSTRAR. Siempre visible mientras `Grabando` sea verdadero. Los contadores **IA / VOS** (sin MAPA, fase 5b) ocupan el lugar de la guía solo en SinDatos y Lejos. En cualquier otro estado manda la guía. Pie: "Parar de grabar: Bandeja › Modo › Mostrar." |
-| **SIN DATOS** | "SIN DATOS" (Barlow 700 30 px, `#C3CAD1`). Línea 1 (13 px, `#DDE2E7`): "No hay curvas guardadas para GT3 en Pista de ejemplo · GP." Línea 2 (13 px, `#A9B2BC`): "Bandeja › Modo › Grabar y da unas 10 vueltas con IA en pista." |
+| **GRABANDO · SOLO VOS** *(fase 5c)* | Mismo chip rojo, mismos colores y punto, con el texto "GRABANDO · SOLO VOS" (modo "Grabar solo vos"). Los contadores muestran **solo VOS** (la columna de la IA se oculta y la de VOS ocupa el ancho) con el encabezado "GT3 · grabando solo vos" y el pie "Solo se graba tu auto: la IA ya guardada no se toca. Parar de grabar: Bandeja › Modo › Mostrar." La guía se muestra igual que en Grabar, con lo ya guardado. |
+| **SIN DATOS** | "SIN DATOS" (Barlow 700 30 px, `#C3CAD1`). Línea 1 (13 px, `#DDE2E7`) y línea 2 (13 px, `#A9B2BC`) según la **causa** (fase 5c, abajo). |
+
+**Causas del SIN DATOS (fase 5c).** El motor primero mira si hay algo que mostrar y recién después si la lectura es válida; así el panel nombra lo que de verdad pasa. Orden de prioridad:
+
+| Causa | Línea 1 | Línea 2 |
+|---|---|---|
+| Archivo de la clase ilegible (JSON dañado y sin `.bak` bueno) | "No se pudo leer el archivo de datos." | "Revisá GT3_Gen2.json en la carpeta de datos (Bandeja › Datos) o restaurá su copia .bak." |
+| No hay archivo, o no tiene curvas | "No hay curvas guardadas para GT3 en Pista de ejemplo · GP." | "Bandeja › Modo › Grabar todo y da unas 10 vueltas con IA en pista." |
+| Hay curvas pero ninguna sirve (frenado sin sentido) | "Datos sin curvas válidas." | "Las curvas de GT3_Gen2.json no tienen un frenado utilizable. Regrabá la clase." |
+| El largo de la pista del juego difiere más de 2 % del guardado | "Largo de pista distinto al guardado (guardado 5000 m, juego 5891 m)." | "Puede ser otra variante o una versión distinta de la pista. Regrabá la clase en Bandeja › Modo › Grabar todo." |
+| Datos buenos pero todavía no hubo una lectura válida en pista (boxes, garaje) | "En boxes: la guía arranca al salir a pista." | (sin línea 2) |
+
+En modo Grabar y Grabar solo vos, el SIN DATOS y el Lejos siguen cediendo su lugar a los contadores. Si ya hubo guía en la sesión y se entra a boxes, se conserva lo último que se mostró (como antes).
 | ~~**Dos carteles distintos** / **Mismo cartel**~~ | *(Fase 5b)* Ya no se muestran carteles. Con IA y vos en la curva, la leyenda lleva las dos etiquetas y la barra los dos marcadores; con una sola referencia, una sola etiqueta y un solo marcador. |
 | **Desbloqueado** | Contorno discontinuo de 2 px `#5AA9FF` con separación de 3 px, más un chip "DESBLOQUEADO · arrastrá para mover". Opacidad forzada a 100 % mientras esté desbloqueado. La ventana del aviso de frenada también se ve (2.1). |
 
@@ -198,22 +223,29 @@ Símbolo de "freno" rojo en una **ventana overlay aparte** (la misma técnica qu
 - **Contraste [Evidencia, WCAG calculado]:** `#E53935` contra su contorno `#0C0E11` da **4,57 : 1**; contra blanco, 4,23 : 1; contra el cielo claro `#BFD8EE`, solo **2,87 : 1**. Por eso el contorno oscuro es obligatorio: separa el símbolo del fondo aunque el rojo solo no alcance. Hay que verlo sobre cielo claro y asfalto con el .exe real.
 - **Daltonismo:** no depende solo del rojo: la forma (círculo con "!" y arcos) y la franja con la palabra FRENÁ alcanzan.
 
-**Comportamiento** (lógica en `AvisoFrenada`, Core, con pruebas):
+**Comportamiento (fase 5c, vigente).** La decisión la toma `DecisorAviso` (Core, con pruebas) **una vez por muestra** y la comparten el símbolo y el pitido; `AvisoFrenada` solo la dibuja a 60 Hz (opacidad y escala).
 
 | Regla | Valor |
 |---|---|
-| Aparece | Al entrar la guía en **FRENÁ** (el punto de frenado) |
-| Desaparece (lo primero que ocurra) | El pedal de freno del auto visto (`mBrake`) supera **0,15**; o pasan **1,5 s** (configurable, 1 a 2 s: `avisoDuracionS` y menú); o la guía deja de estar en FRENÁ (pasó el vértice) |
-| Repetición | **No vuelve** a aparecer en la misma curva en la misma pasada. Se rearma al cambiar de curva o al volver a Lejos / SIN DATOS (otra vuelta) |
-| Ya venías frenando | Si el pedal ya supera 0,15 al llegar al punto, no aparece |
-| Transición | Fundido de **80 ms** al aparecer y al desaparecer; sin parpadeo, pulso ni destello. Se anima a 60 Hz con el reloj, no con la telemetría (~27 Hz) |
-| Toque y Levantá | Nunca disparan el aviso |
-| Opción en el menú | "Aviso de frenada (símbolo)" activa o desactiva; "Probar aviso" lo muestra 1,5 s sin estar en pista (aunque esté desactivado); tamaño y duración también en el menú |
+| Rampa (aparece gradualmente) | La opacidad sube linealmente de 0 a 1 según el **tiempo que falta** al punto de frenado (metros ÷ velocidad). Empieza a **2,0 s** antes (configurable de 1 a 3 s: `avisoRampaS` y menú "Anticipación del aviso") y llega al **100 % justo en el punto**. La escala acompaña: 85 % → 100 % |
+| La rampa no vuelve atrás | Se guarda el máximo de la pasada: si levantás y la velocidad cae, o hay ruido, no baja. Un hueco de datos de ~0,45 s solo la adelanta |
+| Pleno | Se mantiene al 100 % hasta que el pedal (`mBrake` del auto visto) supera **0,15**, o pasan **1,5 s** después del punto (configurable, 1 a 2 s: `avisoDuracionS`), o la guía deja de estar en FRENÁ (pasó el vértice) |
+| Transición | Sube siguiendo la rampa (tope de 80 ms por si hay un salto de datos); al desaparecer, fundido corto de **80 ms**. Sin parpadeo, pulso ni destello. Se anima a 60 Hz con el reloj, no con la telemetría (~27 Hz) |
+| Pitido | **Una sola vez**, al llegar al punto de frenado, y solo si el pedal no supera 0,15 en ese momento |
+| Ya estás frenando | Si el pedal supera 0,15 **al llegar** al punto, o ya lo superaste **dentro de la zona inmediata** (últimos **1,0 s o 40 m** antes del punto, lo que abarque más), esa pasada queda atendida: ni símbolo ni pitido, aunque después sueltes el pedal. Un toque de pedal más lejos del punto (por ejemplo el final de la frenada anterior) solo oculta el símbolo mientras dura y lo deja seguir cuando soltás |
+| Referencia principal | Rige **solo** la referencia principal elegida (bandeja › Referencia principal). Si la curva no tiene bloque de esa referencia (la guía muestra la otra para mostrar algo, con su etiqueta IA o VOS), **no hay ni pitido ni símbolo** en esa curva. Al cambiar la referencia rige la nueva |
+| Repetición | **No vuelve** a aparecer ni pitar en la misma curva en la misma pasada. Se rearma al cambiar de curva o al volver a Lejos / SIN DATOS (otra vuelta) |
+| Toque y Levantá | Nunca disparan el aviso (solo las curvas de frenada) |
+| Opción en el menú | "Aviso de frenada (símbolo)" activa o desactiva; "Probar aviso" lo muestra 1,5 s sin estar en pista (aunque esté desactivado); tamaño, anticipación y duración también en el menú |
 | Con "Ocultar overlay" | El aviso también se apaga |
+
+**Por qué el símbolo llegaba tarde (fase 5b).** En el código de la 5b el pitido y el símbolo se disparaban en la misma muestra (la guía entrando en FRENÁ), pero el símbolo nacía **con opacidad 0 en ese instante** y recién llegaba al 100 % a los 80 ms (sin contar el tope de 40 ms por tick del reloj y que la ventana es transparente con composición por software), mientras el pitido suena de inmediato. Además, aparecer *en* el punto de frenado no deja tiempo de reacción. Con la rampa el símbolo ya está completo en el punto y empieza a verse 2 s antes; el pitido sigue sonando en el punto. No se pudo medir en vivo (compila, sin ejecutar).
+
+**Comportamiento anterior (fase 5b, reemplazado).** Aparecía de golpe al entrar la guía en FRENÁ, con fundido de 80 ms; desaparecía con el pedal > 0,15, a los 1,5 s o al pasar el vértice; el pitido sonaba aunque ya estuvieras frenando y con la referencia que cayera por defecto.
 
 **Ventana.** Bloqueada: invisible (opacidad 0), no recibe clics ni foco (`WS_EX_TRANSPARENT | NOACTIVATE | TOOLWINDOW`). Desbloqueada (**el mismo atajo `Ctrl+Alt+L` y el mismo ítem de la bandeja valen para las dos ventanas**): se ve el símbolo a media opacidad como mínimo sobre un fondo oscuro, con contorno azul discontinuo y un chip "AVISO"; se arrastra con el botón izquierdo y se cambia el tamaño con la rueda (pasos de 10 %) o con el agarre de la esquina. Posición (por monitor) y escala se guardan en `config.json` (`avisoPosiciones`, `avisoEscala`). Sin posición guardada: centrada en horizontal, a 30 % del alto del monitor.
 
-**Verificar con el .exe real:** que aparezca a tiempo y no estorbe; si 0,15 y 1,5 s son buenos valores; que el fundido de 80 ms no se note como parpadeo; el contraste del contorno; que la ventana transparente no robe el foco ni los clics de AMS2.
+**Verificar con el .exe real:** que la rampa de 2 s se vea natural y llegue completa justo en el punto; si 0,15, la zona de 1 s / 40 m y 1,5 s son buenos valores; que el fundido de 80 ms no se note como parpadeo; el contraste del contorno; que la ventana transparente no robe el foco ni los clics de AMS2.
 
 **Estados no cubiertos por `PanelGuia` pero necesarios [Criterio]**
 
@@ -339,10 +371,10 @@ Con eso, arriba a la derecha queda libre. **Riesgo:** AMS2 puede mostrar ahí un
 **Menú de bandeja, orden vigente (fase 5b):**
 
 1. Bloquear overlay (con marca y el atajo).
-2. Modo: Mostrar / Grabar.
+2. Modo *(fase 5c)*: **Grabar todo (IA + vos)** / **Grabar solo vos** / **Mostrar**.
 3. Referencia principal: IA / Vos.
 4. Tamaño del overlay y Opacidad del fondo.
-5. Aviso de frenada (marca), Probar aviso, Tamaño del aviso (50–300 %), Duración máxima del aviso (1,0 / 1,5 / 2,0 s).
+5. Aviso de frenada (marca), Probar aviso, Tamaño del aviso (50–300 %), **Anticipación del aviso** (1,0 a 3,0 s antes), Duración del aviso después del punto (1,0 / 1,5 / 2,0 s).
 6. Pitido al frenar (marca) y Probar pitido.
 7. Atajo de bloqueo.
 8. Ocultar / Mostrar overlay.
@@ -376,7 +408,7 @@ La interfaz **no agrega su propia lógica de estado**. Solo dibuja.
 | Actualización de números | Máximo 10 Hz. Ancho de cifras fijo. |
 | Cuenta regresiva | Metros enteros, decreciente hasta 0; en Lejos, redondeados a 10. |
 | Duración de FRENÁ en pantalla | Desde el punto de frenado hasta el vértice (unos segundos). Sin límite adicional. |
-| Aviso de frenada | Fundido de 80 ms, tope de 1,5 s (2.1) |
+| Aviso de frenada | Rampa de 2 s hasta el punto (1 a 3 s), pleno hasta 1,5 s después, fundido de salida de 80 ms (2.1) |
 
 **Rojo no invasivo.** En el lienzo todo el panel (320 × ~200) se pone rojo `#D93A30`. Es mucha superficie roja en el campo visual periférico, justo cuando más atención hay que prestar a la pista. Propuesta: **solo la franja superior de 40 px en rojo**, y el cuerpo sigue oscuro. ~~Alternativa: opción "Rojo suave"~~ (contorno de 3 px y franja `#5A1D19`): **sacada en la fase 5b** por decisión del usuario; queda la franja roja de 40 px por defecto.
 

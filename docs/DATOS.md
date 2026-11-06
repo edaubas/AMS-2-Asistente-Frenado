@@ -4,7 +4,7 @@ Todo vive en `%APPDATA%\AMS2AsistenteFrenado\` (normalmente `C:\Users\<vos>\AppD
 
 | Qué | Dónde | Cuándo se crea | Tamaño real |
 |---|---|---|---|
-| **Mapa de la pista** | `<pista>\<variante>\mapa.json` | Al grabar (modo Grabar), una vez por pista y variante. Se sigue guardando aunque el overlay ya no lo dibuje | **~73 KB** (un punto cada 5 m; Watkins Glen GP) |
+| **Mapa de la pista** | `<pista>\<variante>\mapa.json` | Al grabar (Grabar todo; en Grabar solo vos solo si no existe), una vez por pista y variante. Se sigue guardando aunque el overlay ya no lo dibuje | **~73 KB** (un punto cada 5 m; Watkins Glen GP) |
 | **Puntos de frenada** | `<pista>\<variante>\<clase>.json` (por ejemplo `GT3_Gen2.json`) | Al grabar, uno por clase de auto | **5 a 7 KB** (8 curvas de frenada más las extras tuyas) |
 | **Configuración** | `config.json` | Al abrir la app y cada vez que cambiás algo | **< 1 KB** |
 | **Copias de seguridad** | `*.json.bak` al lado de cada archivo | Automáticas al reemplazar un archivo | Igual que el original |
@@ -25,6 +25,17 @@ Bandeja › **Datos › Importar datos…** lee ese `.zip`:
 - Antes de tocar nada valida todo el `.zip`: solo acepta rutas relativas dentro de la carpeta de datos (se rechazan `..`, rutas absolutas, `C:\…` y similares: protección *zip-slip*) y solo archivos `.json` que se puedan leer. Si algo falla, **no se importa nada**.
 - De cada archivo que ya existía deja una copia `.bak` al lado y recién después lo reemplaza.
 - No toca `capturas\`, ni `config.json` si el `.zip` no lo trae.
-- Hay que estar en **Modo › Mostrar** (en Grabar el programa podría pisar lo importado).
+- Hay que estar en **Modo › Mostrar**: en cualquier modo de grabación (Grabar todo o Grabar solo vos) el programa podría pisar lo importado, y se niega.
+
+## Modo "Grabar solo vos" (fase 5c)
+
+Bandeja › **Modo › Grabar solo vos** graba únicamente al auto que mirás; la IA no se procesa. Qué pasa con los archivos:
+
+- **`<clase>.json`:** se renueva solo el bloque `vos` de cada curva. Los bloques `ia`, los nombres, las notas, los campos extra, el `vertice` y el `tipo` de una curva que ya tenía bloque `ia` **no cambian**. Las curvas que esta sesión no volvió a ver (por ejemplo, la IA frena ahí y vos no) **se conservan enteras**, aunque tengan nombre automático ("Curva 9"); en el modo normal sí se descartan. No se crean curvas solo de la IA; una curva nueva que solo frenás vos se agrega con bloque `vos`.
+- **`mapa.json`:** si **ya existe, no se toca** (decisión por seguridad: lo armaron las vueltas de la IA y tus vueltas, y con pocas vueltas tuyas no tiene sentido pisarlo). Si no existe, se crea con tus vueltas.
+- Cada grabación que reemplaza un archivo sigue dejando su `.bak`.
+- Al cambiar entre "Grabar todo" y "Grabar solo vos" se guarda lo juntado y se empieza un grabador limpio.
+
+Si un archivo está ilegible, la app lo avisa en el panel (SIN DATOS: "No se pudo leer el archivo de datos"); el motivo se obtiene con `Almacen.LeerClaseDetallado` (la lectura de siempre, `LeerClase`, sigue devolviendo `null`).
 
 *Los cuadros de diálogo de exportar e importar compilan pero no se ejecutaron nunca en Windows. La lógica del `.zip` (incluido el zip-slip) tiene pruebas en Linux.*

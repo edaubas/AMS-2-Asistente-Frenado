@@ -2,7 +2,7 @@
 
 App externa para Windows que lee la telemetría de **Automobilista 2** y muestra, por pista, variante y clase, dónde frena la IA y dónde frenás vos. Es un ayuda memoria para aprender o recordar circuitos.
 
-**Estado:** fases 1 (base del repo), 2 (lector y captura), 3 (grabación), 4 (guía), 5 (overlay y bandeja) y **5b (ajustes tras la primera prueba con AMS2)** implementadas. **Lo de ventana, sonido y cuadros de diálogo compila pero no se ejecutó nunca**: ni el overlay WPF, ni el aviso de frenada, ni el pitido, ni exportar/importar, ni la bandeja, el atajo o las fuentes se vieron en Windows; todo lo que lee el juego está *sin probar en AMS2*. Falta la fase 6 (release por tag). Pasos para probar el `.exe`: [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md); diagnóstico de la fase 2: [docs/FASE-2-DIAGNOSTICO.md](docs/FASE-2-DIAGNOSTICO.md).
+**Estado:** fases 1 (base del repo), 2 (lector y captura), 3 (grabación), 4 (guía), 5 (overlay y bandeja) y **5b (ajustes tras la primera prueba con AMS2)** y **5c (ajustes tras la segunda prueba)** implementadas. **Lo de ventana, sonido y cuadros de diálogo compila pero no se ejecutó nunca**: ni el overlay WPF, ni el aviso de frenada, ni el pitido, ni exportar/importar, ni la bandeja, el atajo o las fuentes se vieron en Windows; todo lo que lee el juego está *sin probar en AMS2*. Falta la fase 6 (release por tag). Pasos para probar el `.exe`: [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md); diagnóstico de la fase 2: [docs/FASE-2-DIAGNOSTICO.md](docs/FASE-2-DIAGNOSTICO.md).
 
 - [Handover: arquitectura, fases y agentes](docs/HANDOVER.md)
 - [Carteles de frenada: cómo se calculan (desactivados en la UI desde la fase 5b)](docs/CARTELES.md)
@@ -43,6 +43,16 @@ Dos partes, separadas a propósito:
 - **Fuentes:** Barlow Condensed (500/600/700) e Inter (400/600/700) embebidas desde las fuentes originales con licencia OFL (`src/AMS2Frenado.App/Fuentes/`, con sus licencias). Si WPF no las toma, cae al respaldo de la spec (Bahnschrift SemiCondensed / Segoe UI). Pendiente de comprobar en Windows qué pesos elige WPF (SemiBold/Medium) y el espaciado entre letras de la spec, que WPF no ofrece en `TextBlock` y no se aplicó.
 - **Carteles por pista** siguen en el `mapa.json` de cada pista (campo `carteles`), no en `config.json`.
 
+## Fase 5c: ajustes tras la segunda prueba con AMS2
+
+Decisiones del usuario después de probar el .exe de la 5b (detalle en [docs/UI-SPEC.md](docs/UI-SPEC.md), qué probar en [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md) sección 8). **Todo lo de ventana y sonido compila pero no se ejecutó**; la lógica tiene pruebas en Linux.
+
+- **SIN DATOS con la causa real:** "En boxes: la guía arranca al salir a pista", "Largo de pista distinto al guardado (guardado X m, juego Y m)", "No hay curvas guardadas para <clase> en <pista · variante>" (solo si de verdad no hay archivo o curvas), "No se pudo leer el archivo de datos" (JSON dañado: `Almacen.LeerClaseDetallado` expone el motivo sin romper `LeerClase`) y "Datos sin curvas válidas".
+- **Un solo decisor para el pitido y el símbolo** (`DecisorAviso`, Core): el pitido no suena si ya estás frenando (pedal > 0,15 al llegar al punto o dentro de la zona inmediata de 1 s / 40 m antes).
+- **Símbolo gradual:** la opacidad (y una escala leve) sube de 0 a 1 en los últimos 2 s (configurable de 1 a 3 s: `avisoRampaS`) hasta el punto de frenado y llega al 100 % justo ahí; no vuelve atrás por ruido. Causa del símbolo tardío de la 5b: nacía con opacidad 0 en el punto y tardaba 80 ms en completarse (ver UI-SPEC 2.1).
+- **La referencia principal manda** en el pitido y el símbolo: si la curva no tiene bloque de la referencia elegida (la guía cae a la otra para mostrar algo), no hay ni pitido ni símbolo en esa curva.
+- **Tercer modo "Grabar solo vos"** (`ModoApp.GrabarSoloVos`, `Grabador(soloVos: true)`): la IA no se vuelve a grabar y sus bloques, nombres y notas guardados no se tocan; `mapa.json` existente tampoco. Chip "GRABANDO · SOLO VOS". Menú: Grabar todo (IA + vos) / Grabar solo vos / Mostrar. Ver [docs/DATOS.md](docs/DATOS.md).
+
 ## Fase 5b: ajustes tras probar el .exe con AMS2
 
 Decisiones del usuario después de la primera prueba (detalle en [docs/UI-SPEC.md](docs/UI-SPEC.md)):
@@ -50,7 +60,7 @@ Decisiones del usuario después de la primera prueba (detalle en [docs/UI-SPEC.m
 - **Sin mini mapa** en el overlay: el grabador sigue guardando `mapa.json`; el overlay queda mucho más chico (guía + una cabecera con pista, clase y modo).
 - **Sin número grande** de cartel: la frenada se apoya en la barra de progreso, la comparación IA / vos, el nombre de la curva, las velocidades entrada → vértice y los metros chicos que bajan hasta 0. El cartel sigue en el Core ([docs/CARTELES.md](docs/CARTELES.md)).
 - **Sin "Rojo suave"** y **sin esquinas en la bandeja**: franja roja de 40 px; el overlay se mueve a mano y la posición y el tamaño se guardan.
-- **Aviso de frenada** (`AvisoFrenada` en el Core, con pruebas; `VentanaAviso` en la App, sin ejecutar): ventana aparte con el símbolo de freno rojo (vector propio) que aparece al llegar al punto de frenado y se va al apretar el freno (`mBrake` > 0,15), a los 1,5 s (configurable, 1 a 2 s) o al pasar el vértice; una vez por curva y pasada; fundido de 80 ms. Se bloquea y desbloquea junto con el overlay (mismo atajo). Menú: activar, "Probar aviso", tamaño (50–300 %) y duración.
+- **Aviso de frenada** (5b; en la 5c aparece gradualmente y lo decide `DecisorAviso`, ver arriba) (`AvisoFrenada` en el Core, con pruebas; `VentanaAviso` en la App, sin ejecutar): ventana aparte con el símbolo de freno rojo (vector propio) que aparece al llegar al punto de frenado y se va al apretar el freno (`mBrake` > 0,15), a los 1,5 s (configurable, 1 a 2 s) o al pasar el vértice; una vez por curva y pasada; fundido de 80 ms. Se bloquea y desbloquea junto con el overlay (mismo atajo). Menú: activar, "Probar aviso", tamaño (50–300 %) y duración.
 - **Pitido** robusto: tono senoidal generado en memoria (`GeneradorTono`, con pruebas) y reproducido con `System.Media.SoundPlayer` fuera del hilo de la interfaz (respaldo `SystemSounds.Beep`); "Probar pitido" en el menú. Reemplaza a `Console.Beep`. **No se pudo ejecutar** (Linux).
 - **Respaldo de datos:** bandeja › Datos › Exportar datos… (`.zip` de `%APPDATA%\AMS2AsistenteFrenado\` sin `capturas`) e Importar datos… (valida rutas contra zip-slip, deja `.bak` y no toca lo que el `.zip` no trae), más "Abrir carpeta de capturas". Lógica en `Core/Datos/RespaldoDatos.cs` con pruebas; los cuadros de diálogo compilan sin ejecutar. Dónde está cada cosa y cuánto pesa: [docs/DATOS.md](docs/DATOS.md).
 - **Previsto, no implementado:** botón en el HUD para cambiar de modo y "✕" / menú contextual sobre el overlay desbloqueado.
