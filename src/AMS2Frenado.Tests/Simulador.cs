@@ -69,11 +69,14 @@ internal sealed class Simulador
     public readonly List<Auto> Autos = [];
     public string Pista = "Demo Circuit", Variante = "GP";
     public double Tiempo;
+    /// <summary>Paso de tiempo por muestra (por defecto 1/30 s; se cambia para simular ~27 Hz o ~39 Hz).</summary>
+    public readonly double PasoS = Dt;
     private uint _n;
 
     /// <param name="ias">cantidad de autos IA (ademas del jugador)</param>
-    public Simulador(int ias = 1, int semilla = 1, string clase = "GT3")
+    public Simulador(int ias = 1, int semilla = 1, string clase = "GT3", double pasoS = Dt)
     {
+        PasoS = pasoS;
         var rng = new Random(semilla);
         Autos.Add(new Auto(Jugador, 6.0, rng) { Clase = clase });
         for (int i = 0; i < ias; i++)
@@ -85,9 +88,9 @@ internal sealed class Simulador
 
     public SharedMemory Paso()
     {
-        Tiempo += Dt;
+        Tiempo += PasoS;
         _n++;
-        foreach (var a in Autos) a.Paso(Dt);
+        foreach (var a in Autos) a.Paso(PasoS);
         return Armar();
     }
 

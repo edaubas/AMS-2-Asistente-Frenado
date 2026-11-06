@@ -3,6 +3,8 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- solo para el icono de la bandeja (NotifyIcon) y las pantallas; ver docs/FASE-5-PRUEBA.md -->
+    <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>AMS2Frenado.App</RootNamespace>
     <AssemblyName>AMS2Frenado</AssemblyName>
     <!-- con PublishSingleFile, empaqueta tambien las DLL nativas de WPF dentro del .exe -->
@@ -10,6 +12,15 @@
     <!-- comprime el contenido del .exe: pesa menos, arranca un poco mas lento -->
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- WPF y WinForms definen Application, MessageBox, etc.: no se importan los espacios de nombres de WinForms por defecto -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Barlow Condensed e Inter (OFL), embebidas -->
+    <Resource Include="Fuentes\*.ttf" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AMS2Frenado.Core\AMS2Frenado.Core.csproj" />
   </ItemGroup>

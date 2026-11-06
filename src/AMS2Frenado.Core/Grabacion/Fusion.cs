@@ -16,7 +16,13 @@ public static partial class Fusion
     public static bool EditadaAMano(CurvaGuardada c)
         => !string.IsNullOrWhiteSpace(c.Nota) || !NombreAutomatico().IsMatch(c.Nombre) || c.Extra is { Count: > 0 };
 
-    public static List<CurvaGuardada> Fusionar(IReadOnlyList<CurvaEmparejada> nuevas, IReadOnlyList<CurvaGuardada> previas, double largo)
+    /// <param name="conservarNoEmparejadas">
+    /// Modo "solo vos": las curvas guardadas que esta sesion no volvio a ver (la IA frena ahi y vos no) se conservan
+    /// enteras, sin importar si tienen nombre o nota (sin esto solo sobreviven las editadas a mano), y las que tienen
+    /// bloque de la IA conservan su vertice y su tipo: solo se agrega o renueva el bloque "vos".
+    /// </param>
+    public static List<CurvaGuardada> Fusionar(IReadOnlyList<CurvaEmparejada> nuevas, IReadOnlyList<CurvaGuardada> previas, double largo,
+        bool conservarNoEmparejadas = false)
     {
         var usadas = new HashSet<int>();
         var ordenadas = nuevas.OrderBy(c => c.Vertice).ToList();
@@ -55,12 +61,14 @@ public static partial class Fusion
                 // esta sesion no vio a la IA (o a vos): se conserva lo grabado antes
                 c.Ia ??= p.Ia;
                 c.Vos ??= p.Vos;
+                // solo vos: la curva sigue siendo la de la IA guardada (mismo vertice y tipo), solo se agrega o renueva tu bloque
+                if (conservarNoEmparejadas && n.Ia is null && p.Ia is not null) { c.Vertice = p.Vertice; c.Tipo = p.Tipo; }
             }
             res.Add(c);
         }
         // curvas con nombre o nota puestos a mano que esta vez no aparecieron: no se pierden
         for (int j = 0; j < previas.Count; j++)
-            if (!usadas.Contains(j) && EditadaAMano(previas[j])) res.Add(previas[j]);
+            if (!usadas.Contains(j) && (conservarNoEmparejadas || EditadaAMano(previas[j]))) res.Add(previas[j]);
 
         res.Sort((a, b) => a.Vertice.CompareTo(b.Vertice));
         var nombres = res.Where(c => c.Nombre != "").Select(c => c.Nombre).ToHashSet();

@@ -1,0 +1,9 @@
+Fuentes embebidas en el .exe (licencia SIL Open Font License 1.1, permite embeber y redistribuir):
+
+- Barlow Condensed Medium / SemiBold / Bold  (c) The Barlow Project Authors, https://github.com/jpt/barlow
+  Origen: https://github.com/google/fonts/tree/main/ofl/barlowcondensed  (texto de la licencia: OFL-BarlowCondensed.txt)
+- Inter Regular / SemiBold / Bold            (c) The Inter Project Authors, https://github.com/rsms/inter
+  Origen: Inter 4.0, extras/ttf del release v4.0     (texto de la licencia: OFL-Inter.txt)
+
+Son los archivos originales, sin modificar. Si faltaran o no cargaran, el overlay usa el respaldo de docs/UI-SPEC.md:
+Bahnschrift SemiCondensed (en lugar de Barlow Condensed) y Segoe UI (en lugar de Inter).

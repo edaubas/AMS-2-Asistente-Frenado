@@ -1,6 +1,10 @@
 # Carteles de frenada
 
-El número grande del panel de Frenada es el **cartel** del circuito en el que hay que frenar (por ejemplo "200 m"), no el metro de la pista. Los metros que faltan hasta el punto de frenado quedan como dato chico y para la lógica de estados.
+> **Desactivado en la UI por decisión del usuario (fase 5b): se lo leyó como cuenta regresiva.** El overlay ya no muestra el cartel ("200 m"). El concepto sigue vivo en `AMS2Frenado.Core` sin cambios y con sus pruebas: `Carteles.cs`, `OpcionesGuia.DesfaseCartelM` / `CartelesPorDefecto`, el campo `carteles` de `mapa.json` y los campos `CartelIa`, `CartelVos`, `CartelPrincipal` y `CartelSecundario` de `PanelGuia`. Solo dejó de dibujarse. Lo que se ve ahora en la frenada es la barra de progreso hasta el punto de frenado, la comparación IA (rombo naranja) / vos (círculo azul), el nombre de la curva, las velocidades entrada → vértice y los metros que faltan como dato chico y decreciente hasta 0 (ver [UI-SPEC.md](UI-SPEC.md)). Si más adelante se quiere volver a mostrar, el cambio es solo de interfaz (`ConstructorVista`).
+
+El texto de abajo describe cómo se calcula el cartel en el Core; sigue valiendo para quien lo use.
+
+Antes (fase 4 y 5): el número grande del panel de Frenada era el **cartel** del circuito en el que hay que frenar (por ejemplo "200 m"), no el metro de la pista. Los metros que faltan hasta el punto de frenado quedan como dato chico y para la lógica de estados.
 
 ## Cálculo
 

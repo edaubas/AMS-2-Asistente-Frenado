@@ -1,0 +1,34 @@
+<Window x:Class="AMS2Frenado.App.VentanaAviso"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="AMS2 Asistente de Frenado - Aviso de frenada"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ShowActivated="False" ResizeMode="NoResize"
+        Width="120" Height="120" Focusable="False" UseLayoutRounding="True" SnapsToDevicePixels="True"
+        MouseLeftButtonDown="AlPulsarMouse" MouseWheel="AlRueda">
+    <Grid>
+        <!-- solo desbloqueada: fondo para poder agarrarla y verla -->
+        <Border x:Name="FondoEdicion" Visibility="Collapsed" Background="#B30C0E11" CornerRadius="12"/>
+        <Viewbox Stretch="Uniform">
+            <Canvas x:Name="Simbolo" Width="120" Height="120" Opacity="0" IsHitTestVisible="False" RenderTransformOrigin="0.5,0.5">
+                <Canvas.RenderTransform>
+                    <ScaleTransform x:Name="EscalaSimbolo" ScaleX="0.85" ScaleY="0.85"/>
+                </Canvas.RenderTransform>
+            </Canvas>
+        </Viewbox>
+        <Rectangle x:Name="Contorno" Visibility="Collapsed" IsHitTestVisible="False" RadiusX="12" RadiusY="12"
+                   Stroke="#5AA9FF" StrokeThickness="2" StrokeDashArray="3 3" Margin="1"/>
+        <Border x:Name="Chip" Visibility="Collapsed" Background="#17304D" CornerRadius="4" Padding="5,1"
+                HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6" IsHitTestVisible="False">
+            <TextBlock Text="AVISO" FontFamily="{StaticResource Inter}" FontSize="10" FontWeight="SemiBold" Foreground="#8CC3FF"/>
+        </Border>
+        <Thumb x:Name="Agarre" Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Bottom" Visibility="Collapsed"
+               Cursor="SizeNWSE" DragDelta="AlArrastrarAgarre" DragCompleted="AlSoltarAgarre">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Polygon Points="16,0 16,16 0,16" Fill="#5AA9FF"/>
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
+    </Grid>
+</Window>
