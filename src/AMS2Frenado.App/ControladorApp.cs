@@ -110,9 +110,11 @@ internal sealed class ControladorApp : IDisposable
                 _ventana.Pintar(v, cuadro, _cfg);
                 if (t - _ultimaReafirmacion > 2) { _ultimaReafirmacion = t; _ventana.ReafirmarArriba(); _aviso.ReafirmarArriba(); }
             }
-            // el aviso se actualiza en cada tick (60 Hz) aunque la telemetria llegue a ~27 Hz, para que el fundido de 80 ms sea fluido
+            // el aviso se actualiza en cada tick (60 Hz) aunque la telemetria llegue a ~27 Hz, para que el fundido de 80 ms sea fluido.
+            // El simbolo y el pitido de una prueba salen del mismo cuadro; el de pista, de la misma muestra (v.Pitar, arriba).
             var cuadroAviso = _servicio.ActualizarAviso(t);
             _aviso.Pintar(cuadroAviso.Opacidad, cuadroAviso.Escala);
+            if (cuadroAviso.Pitar) _pitido.Reproducir();
         }
         catch (Exception e)
         {
@@ -132,6 +134,7 @@ internal sealed class ControladorApp : IDisposable
         _servicio.AvisoActivo = _cfg.AvisoActivo && _cfg.Visible;
         _servicio.AvisoDuracionS = _cfg.AvisoDuracionS;
         _servicio.AvisoRampaS = _cfg.AvisoRampaS;
+        _servicio.AvisoAnticipacionS = _cfg.AvisoAnticipacionS;
     }
 
     private void Guardar()
@@ -163,10 +166,11 @@ internal sealed class ControladorApp : IDisposable
         _bandeja.AlternarPitido += () => Alternar(() => _cfg.Pitido = !_cfg.Pitido);
         _bandeja.AlternarAviso += () => Alternar(() => _cfg.AvisoActivo = !_cfg.AvisoActivo);
         _bandeja.ProbarAviso += () => _servicio.ProbarAviso(_reloj.Elapsed.TotalSeconds);
-        _bandeja.ProbarPitido += _pitido.Reproducir;
+        _bandeja.ProbarPitido += () => _servicio.ProbarPitido(_reloj.Elapsed.TotalSeconds);     // respeta la anticipacion: pita al terminar la rampa
         _bandeja.EscalaAvisoElegida += s => { Alternar(() => _cfg.AvisoEscala = s); _aviso.AplicarEscala(_cfg.AvisoEscala); };
         _bandeja.DuracionAvisoElegida += d => Alternar(() => _cfg.AvisoDuracionS = d);
         _bandeja.RampaAvisoElegida += d => Alternar(() => _cfg.AvisoRampaS = d);
+        _bandeja.AnticipacionElegida += d => Alternar(() => _cfg.AvisoAnticipacionS = d);
         _bandeja.ModoElegido += m => Alternar(() => _cfg.Modo = m);
         _bandeja.ReferenciaElegida += r => Alternar(() => _cfg.ReferenciaPrincipal = r);
         _bandeja.OpacidadElegida += a => Alternar(() => _cfg.Opacidad = a);

@@ -46,6 +46,8 @@ public sealed class ConfigApp
     public double AvisoDuracionS { get; set; } = AvisoFrenada.DuracionPorDefectoS;
     /// <summary>Segundos antes del punto de frenado en que el simbolo empieza a aparecer (1 a 3).</summary>
     public double AvisoRampaS { get; set; } = DecisorAviso.RampaPorDefectoS;
+    /// <summary>Segundos antes del punto de frenado en que suena el pitido y el simbolo llega al 100 % (0 a 2,0; paso 0,1; 0 = en el punto).</summary>
+    public double AvisoAnticipacionS { get; set; } = DecisorAviso.AnticipacionPorDefectoS;
     /// <summary>Escala del simbolo, 0,5 a 3 sobre 120 px.</summary>
     public double AvisoEscala { get; set; } = 1.0;
     /// <summary>Posicion de la ventana del aviso en DIP por monitor. Vacio: centrado, en el tercio superior.</summary>
@@ -69,6 +71,7 @@ public sealed class ConfigApp
         Atajo = atajo.Texto;
         AvisoDuracionS = AvisoFrenada.LimitarDuracion(AvisoDuracionS);
         AvisoRampaS = DecisorAviso.LimitarRampa(AvisoRampaS);
+        AvisoAnticipacionS = DecisorAviso.LimitarAnticipacion(AvisoAnticipacionS);
         AvisoEscala = MedidasAviso.LimitarEscala(AvisoEscala);
         Posiciones = LimpiarPosiciones(Posiciones);
         AvisoPosiciones = LimpiarPosiciones(AvisoPosiciones);
@@ -87,7 +90,7 @@ public sealed class ConfigApp
     {
         Modo = o.Modo; Bloqueado = o.Bloqueado; Visible = o.Visible; Pitido = o.Pitido;
         ReferenciaPrincipal = o.ReferenciaPrincipal; Esquina = o.Esquina; Escala = o.Escala; Opacidad = o.Opacidad;
-        AvisoActivo = o.AvisoActivo; AvisoDuracionS = o.AvisoDuracionS; AvisoRampaS = o.AvisoRampaS; AvisoEscala = o.AvisoEscala;
+        AvisoActivo = o.AvisoActivo; AvisoDuracionS = o.AvisoDuracionS; AvisoRampaS = o.AvisoRampaS; AvisoAnticipacionS = o.AvisoAnticipacionS; AvisoEscala = o.AvisoEscala;
         AvisoPosiciones = new Dictionary<string, PosicionVentana>(o.AvisoPosiciones);
         Atajo = o.Atajo; AvisoInicialMostrado = o.AvisoInicialMostrado;
         Posiciones = new Dictionary<string, PosicionVentana>(o.Posiciones);
@@ -152,6 +155,7 @@ public sealed class AlmacenConfig
                 AvisoActivo = Campo(o, "avisoActivo", d.AvisoActivo),
                 AvisoDuracionS = Campo(o, "avisoDuracionS", d.AvisoDuracionS),
                 AvisoRampaS = Campo(o, "avisoRampaS", d.AvisoRampaS),
+                AvisoAnticipacionS = Campo(o, "avisoAnticipacionS", d.AvisoAnticipacionS),
                 AvisoEscala = Campo(o, "avisoEscala", d.AvisoEscala),
                 AvisoPosiciones = Campo(o, "avisoPosiciones", new Dictionary<string, PosicionVentana>()),
                 Atajo = Campo(o, "atajo", d.Atajo),

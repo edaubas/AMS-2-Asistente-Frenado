@@ -89,12 +89,26 @@ public sealed class ServicioOverlay
     }
     /// <summary>Segundos antes del punto de frenado en que el simbolo empieza a aparecer (1 a 3).</summary>
     public double AvisoRampaS { get => _decisor.RampaS; set => _decisor.RampaS = value; }
-    /// <summary>"Probar aviso": lo muestra durante la duracion configurada sin estar en pista.</summary>
-    public void ProbarAviso(double segundos) => _aviso.Probar(segundos);
+    /// <summary>
+    /// Segundos ANTES del punto de frenado en que suena el pitido y el simbolo llega al 100 % (0 a 2,0; 0 = en el punto).
+    /// Es el instante de aviso T_aviso unico de los dos. La UI de configuracion solo tiene que enlazar esta propiedad.
+    /// </summary>
+    public double AvisoAnticipacionS { get => _decisor.AnticipacionS; set => _decisor.AnticipacionS = value; }
+    /// <summary>Compensacion de latencia fija de ventana y sonido (0 a 0,25 s, sin calibrar en pista: 0). No se guarda en config.json.</summary>
+    public double CompensacionLatenciaS { get => _decisor.CompensacionLatenciaS; set => _decisor.CompensacionLatenciaS = value; }
+    /// <summary>
+    /// "Probar aviso": pasada sintetica con la rampa completa (<see cref="AvisoRampaS"/>) que termina en T_aviso, donde pita si el
+    /// pitido esta activado; el simbolo sigue pleno hasta <see cref="AvisoDuracionS"/> despues del punto (T_aviso + anticipacion).
+    /// Ignora si el aviso esta activado.
+    /// </summary>
+    public void ProbarAviso(double segundos) => _aviso.Probar(segundos, AvisoRampaS, AvisoAnticipacionS, pitar: _pitidoActivo);
+    /// <summary>"Probar pitido": la misma pasada, pero pita siempre (aunque el pitido este apagado) y el simbolo solo si el aviso esta activado.</summary>
+    public void ProbarPitido(double segundos) => _aviso.Probar(segundos, AvisoRampaS, AvisoAnticipacionS, pitar: true, simbolo: AvisoActivo);
 
     /// <summary>
     /// Cuadro del aviso de frenada en este instante. Se llama en cada tick de la ventana (~60 Hz), con o sin muestra
-    /// nueva, para que el fundido avance con el reloj y no con la telemetria (~27 Hz). La decision (rampa, pleno,
+    /// nueva, para que el fundido avance con el reloj y no con la telemetria (~27 Hz). El cuadro trae <see cref="CuadroAviso.Pitar"/>
+    /// solo en las pruebas. La decision (rampa, pleno,
     /// "ya frenando") se toma una vez por muestra en <see cref="Paso"/>.
     /// </summary>
     public CuadroAviso ActualizarAviso(double segundos) => _aviso.Actualizar(_decision, segundos);

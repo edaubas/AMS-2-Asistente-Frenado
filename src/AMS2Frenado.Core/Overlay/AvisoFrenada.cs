@@ -2,9 +2,10 @@ namespace AMS2Frenado.Core.Overlay;
 
 /// <summary>
 /// Lo que la ventana del aviso dibuja en este instante: opacidad 0..1 del simbolo (0 = nada) y una escala leve
-/// que acompana a la opacidad (el simbolo "crece" un poco mientras aparece).
+/// que acompana a la opacidad (el simbolo "crece" un poco mientras aparece). <see cref="Pitar"/> solo se usa en
+/// "Probar aviso" / "Probar pitido": es el cuadro en que la rampa de prueba llega al 100 % (T_aviso de la prueba).
 /// </summary>
-public readonly record struct CuadroAviso(double Opacidad)
+public readonly record struct CuadroAviso(double Opacidad, bool Pitar = false)
 {
     public const double EscalaMinima = 0.85;
     public bool Visible => Opacidad > 0;
@@ -13,11 +14,11 @@ public readonly record struct CuadroAviso(double Opacidad)
 }
 
 /// <summary>
-/// Presentacion del simbolo de frenada (la decision la toma <see cref="DecisorAviso"/>): lleva la opacidad hacia el
-/// objetivo que da el decisor. Al subir sigue la rampa casi sin demora (tope de <see cref="SubidaS"/> para absorber
-/// saltos, por ejemplo un hueco de datos); al bajar hace un fundido corto de <see cref="FundidoS"/>. Se llama a ~60 Hz con
-/// o sin muestra nueva, asi el fundido avanza con el reloj y no con la telemetria (~27 Hz). Logica pura, sin ventanas.
-/// Sin probar en AMS2 en vivo.
+/// Presentacion del simbolo de frenada (la decision la toma <see cref="DecisorAviso"/>): lleva la opacidad al objetivo que
+/// da el decisor. La rampa YA es la entrada del simbolo, asi que al SUBIR la opacidad es el objetivo, sin fundido ni tope
+/// propios (cualquier suavizado de entrada retrasaria el 100 % respecto del pitido). Solo al BAJAR hace un fundido corto de
+/// <see cref="FundidoS"/>. Se llama a ~60 Hz con o sin muestra nueva, asi el fundido avanza con el reloj y no con la
+/// telemetria (~27 Hz). Logica pura, sin ventanas. Sin probar en AMS2 en vivo.
 /// </summary>
 public sealed class AvisoFrenada
 {
@@ -25,14 +26,10 @@ public sealed class AvisoFrenada
     public const double UmbralFrenoPorDefecto = DecisorAviso.UmbralFrenoPorDefecto;
     /// <summary>Fundido al desaparecer.</summary>
     public const double FundidoS = 0.080;
-    /// <summary>Tiempo que tarda en ir de 0 a 1 como maximo al subir (una rampa normal dura ~2 s y no lo toca).</summary>
-    public const double SubidaS = 0.080;
-    /// <summary>Tope del paso de reloj que avanza el fundido: tras una pausa larga no salta de 0 a 1 de golpe.</summary>
-    private const double MaxPasoRelojS = 0.040;
 
     private double _duracion = DuracionPorDefectoS;
-    private bool _prueba;
-    private double _tPrueba;
+    private bool _prueba, _pruebaSimbolo, _pruebaPitido, _pruebaPito;
+    private double _tPrueba, _pruebaRampa, _pruebaAnticipacion;
     private double _opacidad;
     private double? _t;
 
@@ -48,8 +45,20 @@ public sealed class AvisoFrenada
     public static double LimitarDuracion(double s)
         => double.IsFinite(s) ? Math.Clamp(s, DuracionMinimaS, DuracionMaximaS) : DuracionPorDefectoS;
 
-    /// <summary>Muestra el simbolo pleno durante <see cref="DuracionS"/> sin estar en pista ("Probar aviso"). Ignora <see cref="Habilitado"/>.</summary>
-    public void Probar(double segundos) { _prueba = true; _tPrueba = segundos; }
+    /// <summary>
+    /// Prueba sin estar en pista ("Probar aviso" / "Probar pitido"): reproduce una pasada sintetica. La opacidad sube de 0 a 1
+    /// durante <paramref name="rampaS"/> (con 0, de golpe); T_aviso de la prueba es el fin de la rampa y ahi sale
+    /// <see cref="CuadroAviso.Pitar"/> (si <paramref name="pitar"/>); el "punto de frenado" llega <paramref name="anticipacionS"/>
+    /// despues de T_aviso y el simbolo pleno sigue <see cref="DuracionS"/> desde ese punto. Ignora <see cref="Habilitado"/>
+    /// salvo que <paramref name="simbolo"/> sea falso (solo pitido).
+    /// </summary>
+    public void Probar(double segundos, double rampaS = 0, double anticipacionS = 0, bool pitar = false, bool simbolo = true)
+    {
+        _prueba = true; _tPrueba = segundos; _pruebaPito = false;
+        _pruebaRampa = double.IsFinite(rampaS) ? Math.Max(rampaS, 0) : 0;
+        _pruebaAnticipacion = double.IsFinite(anticipacionS) ? Math.Max(anticipacionS, 0) : 0;
+        _pruebaPitido = pitar; _pruebaSimbolo = simbolo;
+    }
 
     /// <summary>
     /// <paramref name="decision"/> es la ultima decision del <see cref="DecisorAviso"/> (<see cref="DecisionAviso.Nada"/> sin
@@ -57,17 +66,24 @@ public sealed class AvisoFrenada
     /// </summary>
     public CuadroAviso Actualizar(DecisionAviso decision, double segundos)
     {
-        double dt = _t is double t0 ? Math.Clamp(segundos - t0, 0, MaxPasoRelojS) : 0;
+        double dt = _t is double t0 ? Math.Max(segundos - t0, 0) : 0;
         _t = segundos;
 
-        if (_prueba && segundos - _tPrueba >= _duracion) _prueba = false;
-
+        bool pitar = false;
         double objetivo = Habilitado && segundos < decision.ExpiraEn ? Math.Clamp(decision.Progreso, 0, 1) : 0;
-        if (_prueba) objetivo = 1;
+        if (_prueba)
+        {
+            double tAviso = _tPrueba + _pruebaRampa;
+            if (segundos >= tAviso + _pruebaAnticipacion + _duracion) _prueba = false;
+            else
+            {
+                double p = _pruebaRampa <= 0 || segundos >= tAviso ? 1 : Math.Clamp((segundos - _tPrueba) / _pruebaRampa, 0, 1);
+                if (_pruebaSimbolo) objetivo = Math.Max(objetivo, p);
+                if (segundos >= tAviso && !_pruebaPito) { _pruebaPito = true; pitar = _pruebaPitido; }
+            }
+        }
 
-        _opacidad = objetivo > _opacidad
-            ? Math.Min(objetivo, _opacidad + dt / SubidaS)
-            : Math.Max(objetivo, _opacidad - dt / FundidoS);
-        return new CuadroAviso(_opacidad);
+        _opacidad = objetivo >= _opacidad ? objetivo : Math.Max(objetivo, _opacidad - dt / FundidoS);
+        return new CuadroAviso(_opacidad, pitar);
     }
 }

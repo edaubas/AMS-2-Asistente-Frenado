@@ -53,9 +53,9 @@ public sealed class AvisoFrenadaTests : IDisposable
         var a = new AvisoFrenada(); double t = 0;
         Assert.All(Tick(a, ref t, Prog(0), 1), o => Assert.Equal(0, o));
         var f = Tick(a, ref t, Prog(1), 0.2);
-        // un salto (hueco de datos) se suaviza en 80 ms pero a los 100 ms ya esta completo
-        Assert.InRange(f[0], 0.05, 0.4);
-        Assert.Equal(1, f[5], 6);
+        // la rampa YA es la entrada: la opacidad es el objetivo desde el primer cuadro, sin fundido ni tope propios
+        // (en la 5c subia en 80 ms y llegaba tarde al 100 % respecto del pitido)
+        Assert.Equal(1, f[0], 9);
     }
 
     [Fact]
@@ -124,12 +124,14 @@ public sealed class AvisoFrenadaTests : IDisposable
     }
 
     [Fact]
-    public void UnaPausaLargaDeRelojNoSaltaElFundido()
+    public void UnaPausaLargaDeRelojNoRetrasaLaEntrada()
     {
         var a = new AvisoFrenada();
         a.Actualizar(Prog(0), 0);
-        var c = a.Actualizar(Prog(1), 10);                          // 10 s despues: dt acotado, no aparece de golpe
-        Assert.True(c.Opacidad < 1);
+        // 10 s despues: el valor no se retrasa por el paso de reloj (es el dato real). El tope de dt de la 5c retrasaba
+        // la entrada y la sacaba de sincronia con el pitido; ahora solo importa para el fundido de salida
+        Assert.Equal(1, a.Actualizar(Prog(1), 10).Opacidad, 9);
+        Assert.Equal(0, a.Actualizar(Prog(0), 10 + 1.0).Opacidad, 9);       // y la salida sigue siendo un fundido de reloj
     }
 
     // ---------------------------------------------------------------- con el simulador (servicio completo)
@@ -204,8 +206,8 @@ public sealed class AvisoFrenadaTests : IDisposable
         Assert.False(s.ActualizarAviso(3).Visible);
         s.ProbarAviso(10);
         double tt = 10; bool visto = false;
-        for (int i = 0; i < 180; i++) { tt += Dt; visto |= s.ActualizarAviso(tt).Visible; }
+        for (int i = 0; i < 300; i++) { tt += Dt; visto |= s.ActualizarAviso(tt).Visible; }
         Assert.True(visto);
-        Assert.False(s.ActualizarAviso(tt + Dt).Visible);                   // 3 s despues ya se apago solo
+        Assert.False(s.ActualizarAviso(tt + Dt).Visible);                   // 5 s despues (rampa 2 s + 2 s de duracion) ya se apago solo
     }
 }

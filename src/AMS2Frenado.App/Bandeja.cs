@@ -26,6 +26,7 @@ internal sealed class Bandeja : IDisposable
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _escalasAviso = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _duracionesAviso = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _rampasAviso = [];
+    private readonly Dictionary<double, Forms.ToolStripMenuItem> _anticipaciones = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _escalas = [];
     private readonly Dictionary<double, Forms.ToolStripMenuItem> _opacidades = [];
     private readonly Dictionary<string, Forms.ToolStripMenuItem> _atajos = [];
@@ -36,7 +37,7 @@ internal sealed class Bandeja : IDisposable
     public event Action? AbrirCarpeta, AbrirCarpetaCapturas, ExportarDatos, ImportarDatos, AbrirDiagnostico, Salir;
     public event Action<ModoApp>? ModoElegido;
     public event Action<ReferenciaGuia>? ReferenciaElegida;
-    public event Action<double>? EscalaElegida, EscalaAvisoElegida, DuracionAvisoElegida, RampaAvisoElegida;
+    public event Action<double>? EscalaElegida, EscalaAvisoElegida, DuracionAvisoElegida, RampaAvisoElegida, AnticipacionElegida;
     public event Action<double>? OpacidadElegida;
     public event Action<string>? AtajoElegido;
 
@@ -110,7 +111,15 @@ internal sealed class Bandeja : IDisposable
             _escalasAviso[s] = it; tamAviso.DropDownItems.Add(it);
         }
         _menu.Items.Add(tamAviso);
-        var rampaAviso = new Forms.ToolStripMenuItem("Anticipación del aviso");
+        // submenu provisorio hasta que exista el deslizador del menu de configuracion (0 a 2,0 s, paso 0,1 s)
+        var antic = new Forms.ToolStripMenuItem("Anticipación del pitido y símbolo");
+        foreach (var d in DecisorAviso.AnticipacionesSugeridasS)
+        {
+            var it = Item(d == 0 ? "0 s (en el punto de frenado)" : $"{d:0.0} s antes del punto".Replace('.', ','), () => AnticipacionElegida?.Invoke(d));
+            _anticipaciones[d] = it; antic.DropDownItems.Add(it);
+        }
+        _menu.Items.Add(antic);
+        var rampaAviso = new Forms.ToolStripMenuItem("Inicio de la rampa del símbolo");
         foreach (var d in new[] { 1.0, 1.5, 2.0, 2.5, 3.0 })
         {
             var it = Item($"{d:0.0} s antes", () => RampaAvisoElegida?.Invoke(d));
@@ -165,6 +174,7 @@ internal sealed class Bandeja : IDisposable
         foreach (var (r, it) in _refs) it.Checked = cfg.ReferenciaPrincipal == r;
         foreach (var (e, it) in _escalasAviso) it.Checked = Math.Abs(cfg.AvisoEscala - e) < 0.01;
         foreach (var (d, it) in _duracionesAviso) it.Checked = Math.Abs(cfg.AvisoDuracionS - d) < 0.01;
+        foreach (var (d, it) in _anticipaciones) it.Checked = Math.Abs(cfg.AvisoAnticipacionS - d) < 0.05;
         foreach (var (d, it) in _rampasAviso) it.Checked = Math.Abs(cfg.AvisoRampaS - d) < 0.01;
         foreach (var (s, it) in _escalas) it.Checked = Math.Abs(cfg.Escala - s) < 0.01;
         foreach (var (a, it) in _opacidades) it.Checked = Math.Abs(cfg.Opacidad - a) < 0.005;
