@@ -276,7 +276,11 @@ public sealed class Grabador
                 var mapa = ps.Mapa.Construir(ps.Pista, ps.Variante);
                 var previo = _almacen.LeerMapa(ps.Pista, ps.Variante);
                 if (mapa is not null && (previo is null || previo.Vueltas <= mapa.Vueltas))
+                {
+                    mapa.Carteles = previo?.Carteles;      // lo editado a mano no se pisa
+                    mapa.Extra = previo?.Extra;
                     _almacen.GuardarMapa(mapa);
+                }
                 ps.MapaSucio = false;
             }
             foreach (var c in ps.Clases.Values.Where(c => c.Sucia))

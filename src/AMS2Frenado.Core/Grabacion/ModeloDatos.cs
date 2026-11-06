@@ -64,4 +64,12 @@ public sealed class MapaPista
     /// <summary>Vueltas validas que se usaron para armarlo.</summary>
     [JsonPropertyName("vueltas")] public int Vueltas { get; set; }
     [JsonPropertyName("puntos")] public List<PuntoMapa> Puntos { get; set; } = [];
+    /// <summary>
+    /// Opcional, se edita a mano: carteles de frenada de la pista en metros (ej. [300, 200, 100, 50]).
+    /// Si falta se usa 400/300/200/100/50. Se conserva al regrabar el mapa. Ver docs/CARTELES.md.
+    /// </summary>
+    [JsonPropertyName("carteles")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? Carteles { get; set; }
+    [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
 }
