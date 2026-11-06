@@ -2,10 +2,11 @@
 
 App externa para Windows que lee la telemetría de **Automobilista 2** y muestra, por pista, variante y clase, dónde frena la IA y dónde frenás vos. Es un ayuda memoria para aprender o recordar circuitos.
 
-**Estado:** fases 1 (base del repo), 2 (lector y captura), 3 (grabación) y 4 (guía), estas dos últimas solo en Core y sin UI, implementadas; **la fase 2 espera que el usuario corra el diagnóstico con AMS2 real** (todo lo que lee el juego está *sin probar en AMS2*). Ver [docs/FASE-2-DIAGNOSTICO.md](docs/FASE-2-DIAGNOSTICO.md).
+**Estado:** fases 1 (base del repo), 2 (lector y captura), 3 (grabación), 4 (guía) y 5 (overlay y bandeja) implementadas. **La fase 5 compila pero no se ejecutó nunca**: ni el overlay WPF, ni la bandeja, ni el atajo, ni el click-through, ni las fuentes se vieron en Windows; todo lo que lee el juego está *sin probar en AMS2*. Falta la fase 6 (release por tag). Pasos para probar el `.exe`: [docs/FASE-5-PRUEBA.md](docs/FASE-5-PRUEBA.md); diagnóstico de la fase 2: [docs/FASE-2-DIAGNOSTICO.md](docs/FASE-2-DIAGNOSTICO.md).
 
 - [Handover: arquitectura, fases y agentes](docs/HANDOVER.md)
 - [Carteles de frenada: cómo se calcula el número grande](docs/CARTELES.md)
+- [Especificación de la interfaz (medidas, colores, estados)](docs/UI-SPEC.md) y [cómo probar la fase 5](docs/FASE-5-PRUEBA.md)
 - [Prototipo en Python (referencia de la lógica)](prototipo/)
 
 ## Fase 3: grabación (Core, sin UI)
@@ -32,14 +33,26 @@ Probado con el simulador portado del prototipo y con una captura real de AMS2 (W
 
 Probado con simulación y con la captura real (Watkins Glen GP, GT3_Gen2, variable `AMS2_CAPTURA_PRUEBA`, se salta si falta): la secuencia Lejos → Aproximación → Inminente → Frená → oculto es monótona en las 8 curvas de la IA (y en las curvas extra tuyas, que la guía sigue con la otra referencia), para el auto visto y para los 46 autos de la IA. **Sin probar en AMS2 en vivo**; los 5 s, los umbrales y el desfase de cartel se calibran en pista.
 
+## Fase 5: overlay y bandeja
+
+Dos partes, separadas a propósito:
+
+- **`AMS2Frenado.Core/Overlay/` (con pruebas, corre en Linux):** todo lo que no es ventana. `ConstructorVista` decide qué texto, color y forma se ve por estado (cartel grande, rombo = IA naranja, círculo = vos azul, franja roja solo en FRENÁ, franja neutra en TOQUE/LEVANTÁ, ámbar solo en la cifra de Inminente); `Suavizador` aplica las reglas anti-parpadeo (fundidos de 80/120/200 ms, cifras a 10 Hz como máximo); `ServicioOverlay` integra todo en cada tick (modo Grabar alimenta al `Grabador`; modo Mostrar carga `<clase>.json` y `mapa.json` de la pista + variante + clase y alimenta al `MotorGuia`; sin AMS2, versión distinta de 14 o sin datos avisa en el panel); además `ConfigApp`/`AlmacenConfig` (`%APPDATA%\AMS2AsistenteFrenado\config.json`, escritura atómica, tolera archivo dañado), esquinas, atajo (`Ctrl+Alt+L` por defecto), proyección del mini mapa y selección de archivos de datos.
+- **`AMS2Frenado.App` (compila, sin ejecutar):** `VentanaOverlay` (WPF sin bordes, siempre arriba, semitransparente; bloqueada es click-through con `WS_EX_LAYERED|TRANSPARENT|NOACTIVATE|TOOLWINDOW`; desbloqueada se mueve y se redimensiona), `Bandeja` (`NotifyIcon` de `System.Windows.Forms`: se eligió por ser lo más corto y conocido en WPF, y solo se usa para el ícono y el menú), `AtajoGlobal` (`RegisterHotKey`; si el registro falla avisa con un globo y la app sigue), `ControladorApp` (lee ~60 Hz y une todo). La ventana de diagnóstico de la fase 2 sigue accesible desde la bandeja.
+- **Fuentes:** Barlow Condensed (500/600/700) e Inter (400/600/700) embebidas desde las fuentes originales con licencia OFL (`src/AMS2Frenado.App/Fuentes/`, con sus licencias). Si WPF no las toma, cae al respaldo de la spec (Bahnschrift SemiCondensed / Segoe UI). Pendiente de comprobar en Windows qué pesos elige WPF (SemiBold/Medium) y el espaciado entre letras de la spec, que WPF no ofrece en `TextBlock` y no se aplicó.
+- **Mapa:** el eje vertical es `-z` (z crece hacia adelante); si el trazo saliera espejado en el juego, es un cambio de signo en `ProyeccionMapa`.
+- **Carteles por pista** siguen en el `mapa.json` de cada pista (campo `carteles`), no en `config.json`.
+
+El número de vuelta y el aviso "Otras clases" de la spec: el panel de grabación muestra la clase en lugar de "vuelta N" (no se sabe si `mCurrentLap` empieza en 0 o en 1); lo demás sigue la spec.
+
 ## Requisito en el juego
 
 `Options › System › Shared Memory = Project CARS 2` y `UDP Frequency = OFF`. Para ver el overlay encima del juego: `Graphics › Window Mode = Borderless`.
 
 ## Estructura
 
-- `src/AMS2Frenado.Core`: `struct SharedMemory` v14 (20 700 bytes), lector con chequeo de versión y de `mSequenceNumber`, captura cruda y reproductor, grabación y guía. Sin UI.
-- `src/AMS2Frenado.App`: WPF; por ahora solo la ventana de diagnóstico.
+- `src/AMS2Frenado.Core`: `struct SharedMemory` v14 (20 700 bytes), lector con chequeo de versión y de `mSequenceNumber`, captura cruda y reproductor, grabación, guía y la lógica del overlay (`Overlay/`). Sin UI.
+- `src/AMS2Frenado.App`: WPF: overlay, bandeja, atajo y la ventana de diagnóstico. Sin ejecutar en Windows.
 - `src/AMS2Frenado.Tests`: xUnit (tamaño y offsets del struct, versión, secuencia, round-trip de captura, detectores, agrupado, grabador con simulador y captura real opcional).
 
 ## Compilar y probar
