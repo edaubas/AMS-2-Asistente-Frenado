@@ -11,8 +11,7 @@
     <ApplicationIcon>Recursos\icono.ico</ApplicationIcon>
     <!-- con PublishSingleFile, empaqueta tambien las DLL nativas de WPF dentro del .exe -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <!-- comprime el contenido del .exe: pesa menos, arranca un poco mas lento -->
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- sin compresion (EnableCompressionInSingleFile): el registro de diagnostico midio 39 s hasta OnStartup con el .exe comprimido en el equipo del usuario; la causa exacta no esta confirmada. Sin comprimir el .exe pesa ~130 MB -->
   </PropertyGroup>
   <ItemGroup>
     <!-- WPF y WinForms definen Application, MessageBox, etc.: no se importan los espacios de nombres de WinForms por defecto -->
